@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0D0D0F" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#F2EDE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15191C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EFE6D6" media="(prefers-color-scheme: light)">
 <title>Fauna Bird Lab</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
@@ -14,8 +14,9 @@
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <!-- soldadinho (Antilophia galeata): corpo em --ave, topete em --topete; ver design/soldadinho.md -->
-    <symbol id="marca" viewBox="-100 -100 210 230"><path d="M64 -28 L86 -32 L66 -44 C64 -66 46 -78 28 -76 C6 -74 -6 -58 -10 -40 C-40 -30 -62 -2 -62 30 C-62 48 -56 60 -48 68 L-86 112 L-72 120 L-32 80 C-10 88 22 82 40 62 C58 42 64 14 58 -6 C62 -14 64 -20 64 -28 Z" style="fill: var(--ave, currentColor)"/><path d="M-6 -56 C6 -84 40 -94 70 -74 C84 -64 92 -56 96 -48 C82 -56 66 -60 50 -60 C30 -60 10 -52 -10 -42 C-34 -32 -50 -6 -52 20 C-54 -8 -38 -40 -6 -56 Z" style="fill: var(--topete, currentColor)"/></symbol>
+    <!-- símbolo oficial SYM-0001-B (soldadinho tirado da foto): disco, galho, ave; ver design/assets/approved -->
+    <clipPath id="disco-marca"><circle cx="378" cy="360" r="330"/></clipPath>
+    <symbol id="marca" viewBox="48 30 660 660"><circle cx="378" cy="360" r="330" style="fill: var(--disco)"/><path clip-path="url(#disco-marca)" d="M0 300 L760 520" style="stroke: var(--agua)" stroke-width="26" stroke-linecap="round"/><path d="M372 398 L378 424 M366 428 C372 420 386 420 392 430 M396 404 L412 434 M402 438 C408 430 422 430 428 440" fill="none" stroke="#C48E88" stroke-width="8" stroke-linecap="round"/><path d="M574 106 L553 160 L526 210 L526 270 L508 324 L462 370 L410 402 L352 404 L272 478 L214 592 L188 614 L170 604 L232 484 L246 440 L250 368 L284 330 L330 282 L408 210 L428 166 L466 140 L520 132 Z" style="fill: var(--ave); stroke: var(--ave)" stroke-width="8" stroke-linejoin="round"/><path d="M574 106 L552 150 L520 152 L486 150 L458 160 L440 184 L436 214 L446 234 L356 264 L410 208 L428 166 L466 140 L520 132 Z" style="fill: var(--topete)"/><path d="M552 157 L584 168 L551 175Z" style="fill: var(--ave)"/><circle cx="500" cy="172" r="10" fill="#2A1010" style="stroke: var(--disco)" stroke-width="4"/></symbol>
     <symbol id="i-ouvir" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM6 11a6 6 0 0 0 12 0M12 17v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-arq" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 14l3-3 3 3M12 11v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-livro" viewBox="0 0 24 24"><path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1zM12 6v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
@@ -24,7 +25,7 @@
 </svg>
 
 <header class="topo">
-  <svg class="simbolo" aria-hidden="true" style="--ave: currentColor"><use href="#marca"/></svg>
+  <svg class="simbolo" aria-hidden="true"><use href="#marca"/></svg>
   <div class="nome">Fauna Bird Lab<small id="subtitulo">Identificar por Som</small></div>
   <div class="chips">
     <span class="chip" id="chip-modelo"><i></i>modelo</span>

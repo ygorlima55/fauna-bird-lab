@@ -22,7 +22,7 @@ import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 import { SCHEMA_OBS, DETECTOR_EVENTOS, perfilAparelho, Diario, metricasJanela } from "../core/observabilidade.js";
 
-const VERSAO_APP = "0.8.3";
+const VERSAO_APP = "0.9.0";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"

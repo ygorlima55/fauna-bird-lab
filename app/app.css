@@ -1,28 +1,32 @@
-/* Fauna Bird Lab 0.8 · identidade Soldadinho (Antilophia galeata), design system em design/soldadinho.md.
-   Escuro (padrão) = a ave na mata: preto, carmim do topete, verde desfocado ao fundo, galho como linha.
-   Claro = papel de caderno de campo com as mesmas cores. Vermelho só para o que importa: gravar, achado, alerta.
-   Fontes do sistema (o app roda offline): serifa nos títulos no lugar da Gloock. */
+/* Fauna Bird Lab 0.9 · identidade Raízes do canto v2 (aprovada em 22/10/2026).
+   Livro: design/raizes-v2 · símbolo oficial SYM-0001-B (soldadinho tirado da foto) em design/assets/approved.
+   Escuro (padrão) = noite de campo, tinta creme. Claro = papel creme, tinta noite.
+   Regras: carmim (--especie) só na ave; polpa (--pri, a renomear para --acao) só em gravar e achado;
+   folha (--ok) só para confirmado. Títulos em caixa alta espaçada (Josefin Sans), texto Work Sans, dados DM Mono.
+   O app roda offline e ainda não embute as fontes: aparecem as reservas do sistema. */
 :root {
-  --fundo: #0D0D0F; --cartao: #16181A; --cartao2: #1C1F21; --borda: #2A2C30; --texto: #F2EDE4; --suave: #A69C8E;
-  --pri: #D7141A; --pri2: #9E0F14; --vivo: #F0453F; --sobre-pri: #F2EDE4;
-  --ok: #8DB066; --aviso: #E0B44C; --iris: #F08A4B;
-  --p1: #3E5A2C; --p2: #7FA05A; --p3: #D7141A; --modo: escuro;
-  --halo-a: #1B2716; --halo-b: #0D0D0F; --sombra: rgba(0,0,0,.55);
-  --mata: #3E5A2C; --folha: #7FA05A; --galho: #C9B79C; --ave: #0D0D0F; --topete: #F2EDE4;
+  --fundo: #15191C; --cartao: #1C2226; --cartao2: #222A2F; --borda: #2C3338; --texto: #EFE6D6; --suave: #A9A091;
+  --pri: #E07A2F; --pri2: #B85F20; --vivo: #E8914E; --sobre-pri: #15191C;
+  --ok: #8DB066; --aviso: #E0B44C; --iris: #F0705A;
+  --p1: #4E9A8A; --p2: #8DB066; --p3: #EFE6D6; --modo: escuro;
+  --halo-a: #1A2624; --halo-b: #15191C; --sombra: rgba(0,0,0,.55);
+  --agua: #4E9A8A; --especie: #D7141A; --disco: #EFE6D6; --ave: #15191C; --topete: #D7141A;
+  --mata: #4E9A8A; --folha: #8DB066; --galho: #A9A091;
   --raio: 16px;
-  --f-titulo: "Gloock", "Iowan Old Style", Georgia, "Noto Serif", "Times New Roman", serif;
-  --f-texto: "Figtree", system-ui, "Segoe UI", Roboto, sans-serif;
+  --f-titulo: "Josefin Sans", "Century Gothic", "Futura", "Avenir Next", "Segoe UI", sans-serif;
+  --f-texto: "Work Sans", system-ui, "Segoe UI", Roboto, sans-serif;
   --f-mono: "DM Mono", ui-monospace, "Cascadia Mono", "Roboto Mono", Consolas, monospace;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root {
-    --fundo: #F2EDE4; --cartao: #FBF8F2; --cartao2: #F6F1E8; --borda: #DDD3C4; --texto: #17130F; --suave: #6B6155;
-    --pri: #C21017; --pri2: #7E0B10; --vivo: #B0121A; --sobre-pri: #FBF8F2;
-    --ok: #3E5A2C; --aviso: #8A6410; --iris: #B4441C;
-    --p1: #7FA05A; --p2: #3E5A2C; --p3: #C21017; --modo: claro;
-    --halo-a: #E3EAD6; --halo-b: #F2EDE4; --sombra: rgba(40,30,20,.16);
-    --mata: #3E5A2C; --folha: #5F7F3E; --galho: #8C7A5E; --ave: #17130F; --topete: #FBF8F2;
+    --fundo: #EFE6D6; --cartao: #F7F1E5; --cartao2: #E9DFCC; --borda: #D9CDB6; --texto: #15191C; --suave: #5F574B;
+    --pri: #C2621E; --pri2: #8E4514; --vivo: #A8521A; --sobre-pri: #15191C;
+    --ok: #3F6B2E; --aviso: #8A6410; --iris: #B23A26;
+    --p1: #2F7A6C; --p2: #3F6B2E; --p3: #15191C; --modo: claro;
+    --halo-a: #E3DCC9; --halo-b: #EFE6D6; --sombra: rgba(30,25,15,.16);
+    --agua: #2F7A6C; --especie: #C8141C; --disco: #F7F1E5; --ave: #15191C; --topete: #C8141C;
+    --mata: #2F7A6C; --folha: #3F6B2E; --galho: #5F574B;
     color-scheme: light;
   }
 }
@@ -32,14 +36,15 @@ body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.45
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--vivo); outline-offset: 2px; }
 .mono { font-family: var(--f-mono); font-size: .85em; }
-h2 { font-family: var(--f-titulo); font-size: 1.3rem; font-weight: 400; margin: 0 0 .6em; }
+h2 { font-family: var(--f-titulo); font-size: 1.02rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 .7em; }
 a { color: var(--vivo); }
 
 /* topo */
 header.topo { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
   background: color-mix(in srgb, var(--fundo) 86%, transparent); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 5; }
-header.topo .simbolo { width: 30px; height: 30px; flex: none; color: var(--texto); --topete: var(--pri); }
-header.topo .nome { font-family: var(--f-titulo); font-weight: 400; font-size: 1.2rem; line-height: 1.1; white-space: nowrap; }
+header.topo .simbolo { width: 32px; height: 32px; flex: none; }
+header.topo .nome { font-family: var(--f-titulo); font-weight: 700; font-size: .98rem; letter-spacing: .22em; text-transform: uppercase; line-height: 1.15; white-space: nowrap; }
+header.topo .nome small { letter-spacing: 0; text-transform: none; }
 header.topo .nome small { display: block; font-family: var(--f-texto); font-weight: 400; font-size: .75rem; color: var(--suave); }
 .chips { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .chip { font: .7rem var(--f-mono); display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px;
@@ -54,27 +59,24 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 
 /* ===== tela Ouvir ===== */
 .ouvir { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 0 22px; margin: 0 -16px 14px;
-  background:   /* mata desfocada atrás da ave (bokeh) */
-    radial-gradient(70px 70px at 14% 22%, color-mix(in srgb, var(--folha) 22%, transparent), transparent 70%),
-    radial-gradient(110px 110px at 88% 30%, color-mix(in srgb, var(--mata) 40%, transparent), transparent 70%),
-    radial-gradient(90px 90px at 80% 82%, color-mix(in srgb, var(--folha) 16%, transparent), transparent 70%),
-    radial-gradient(110% 70% at 50% 46%, var(--halo-a), var(--halo-b) 72%);
-  border-bottom: 1px solid color-mix(in srgb, var(--galho) 35%, transparent); }
-.chamada { font: 400 1.75rem/1.15 var(--f-titulo); text-align: center; margin: 6px 16px 0; text-wrap: balance; }
+  background: radial-gradient(110% 70% at 50% 46%, var(--halo-a), var(--halo-b) 72%);
+  border-bottom: 1px solid var(--borda); }
+.chamada { font: 700 1.3rem/1.2 var(--f-titulo); letter-spacing: .14em; text-transform: uppercase; text-align: center; margin: 6px 16px 0; text-wrap: balance; }
 .palpite { font: .82rem var(--f-mono); color: var(--vivo); min-height: 1.3em; margin: 0 16px; text-align: center; }
 .orbe { position: relative; width: min(330px, 92vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
 .orbe canvas { position: absolute; inset: -6%; width: 112%; height: 112%; pointer-events: none; }
 .bt-ouvir { position: relative; width: 44%; aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer;
-  background: var(--pri); color: var(--sobre-pri); --ave: #0D0D0F; --topete: #F2EDE4;
+  background: transparent; color: #15191C; --ave: #15191C; --topete: var(--especie);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 8px color-mix(in srgb, var(--pri) 22%, transparent), 0 0 0 16px color-mix(in srgb, var(--pri) 9%, transparent),
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--pri) 30%, transparent), 0 0 0 14px color-mix(in srgb, var(--pri) 10%, transparent),
     0 18px 40px var(--sombra);
   transition: transform .35s cubic-bezier(.3,.7,.2,1); -webkit-tap-highlight-color: transparent; }
 .bt-ouvir:hover { transform: scale(1.04); }
 .bt-ouvir:disabled { cursor: wait; filter: saturate(.4); opacity: .75; }
-.bt-ouvir .ic-marca { width: 64%; height: 64%; }
+.bt-ouvir .ic-marca { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bt-ouvir .ic-parar { position: relative; }
 .bt-ouvir .ic-parar { display: none; width: 28%; height: 28%; border-radius: 6px; background: currentColor; }
-.bt-ouvir.parar .ic-marca { display: none; }
+.bt-ouvir.parar .ic-marca { display: block; opacity: .25; }
 .bt-ouvir.parar .ic-parar { display: block; }
 .orbe.ouvindo .bt-ouvir { animation: pulsa 1.1s ease-in-out infinite; }
 @keyframes pulsa { 50% { transform: scale(.94); } }
@@ -108,7 +110,7 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 .lista { list-style: none; margin: 0; padding: 0; }
 .lista li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--borda); }
 .lista li:first-child { border-top: 0; }
-.lista li:first-child:not(.vazio) .nome { font: 400 1.5rem var(--f-titulo); }
+.lista li:first-child:not(.vazio) .nome { font: 700 1.15rem/1.25 var(--f-titulo); letter-spacing: .1em; text-transform: uppercase; }
 .lista li:first-child:not(.vazio) .escore { color: var(--vivo); }
 .lista .vazio { display: block; color: var(--suave); }
 .lista .nome { font-weight: 700; }
@@ -132,7 +134,7 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 .abas button { flex: 1; min-height: 52px; border: 0; background: none; cursor: pointer; color: var(--suave);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .74rem; font-weight: 600; }
 .abas button svg { width: 22px; height: 22px; }
-.abas { border-top-color: color-mix(in srgb, var(--mata) 70%, var(--borda)); }
+.abas { border-top-color: var(--borda); }
 .abas button[aria-selected="true"] { color: var(--texto); }
 .abas button[aria-selected="true"] svg { color: var(--vivo); }
 .salvo { margin: 8px 0 0; font-size: .9rem; }
@@ -166,7 +168,7 @@ table.metricas { margin: 8px 0; }
 
 /* ficha de campo */
 .ficha { border-top: 1px solid var(--borda); margin-top: 12px; padding-top: 10px; display: grid; gap: 8px; }
-.ficha h3 { font-family: var(--f-titulo); font-weight: 400; margin: 0; font-size: 1.1rem; }
+.ficha h3 { font-family: var(--f-titulo); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 0; font-size: .95rem; }
 .ficha label { display: flex; flex-direction: column; font-size: .85rem; gap: 3px; flex: 1; min-width: 140px; }
 .ficha input, .ficha textarea, .ficha select { padding: 8px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); min-height: 40px; }
 .ficha .linha { margin-top: 0; }
