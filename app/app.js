@@ -22,7 +22,7 @@ import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 import { SCHEMA_OBS, DETECTOR_EVENTOS, perfilAparelho, Diario, metricasJanela } from "../core/observabilidade.js";
 
-const VERSAO_APP = "0.9.0";
+const VERSAO_APP = "0.9.1";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -1113,7 +1113,7 @@ async function iniciarApp() {
   } catch (e) {
     chip("chip-modelo", "erro", "sem modelo");
     botaoGravar("Modelo não carregou");
-    $("estado").textContent = e.message;
+    oferecerNovaTentativa(e.message);
     return;
   }
   await definirLocal(lerLocal("fbl-local"));
@@ -1148,12 +1148,18 @@ async function garantirIsolamento() {
 }
 garantirIsolamento().then((recarregando) => { if (!recarregando) iniciarApp(); });
 
-// Modelo que não termina de carregar (caso do iPhone 14 Pro Max, CASE_IOS_001): depois de 60 s, oferece o
-// diagnóstico, que mostra em que etapa o aparelho parou. Na 1ª vez o download de ~80 MB pode passar disso.
+// Modelo que não termina de carregar (iPhone 14 Pro Max, CASE_IOS_001; POCO M5s na 1ª abertura com várias
+// janelas do app, quando o modelo de som nunca chegou ao worker e reabrir resolveu): depois de 45 s, ou se der
+// erro, oferece recarregar e o diagnóstico, que mostra em que etapa o aparelho parou.
+function oferecerNovaTentativa(texto) {
+  $("estado").innerHTML = `${esc(texto)} <button class="btn" id="btn-tentar">Tentar de novo</button>
+    <a href="diagnostico.html">Diagnóstico do aparelho</a>`;
+  $("btn-tentar").onclick = () => location.reload();
+}
 setTimeout(() => {
   if (!estado.motor?.rotulos && $("btn-gravar").disabled)
-    $("estado").innerHTML = `O modelo está demorando para carregar. Se continuar assim, <a href="diagnostico.html">abra o diagnóstico do aparelho</a> e mande o resultado.`;
-}, 60000);
+    oferecerNovaTentativa("O modelo está demorando para carregar. Na 1ª vez, com internet lenta, o download de ~80 MB pode levar mais; se não, feche outras janelas do app e tente de novo.");
+}, 45000);
 
 // ---------- atualização automática ----------
 // Quem abre pelo link público recebe a versão nova sem cabo: o app pergunta ao servidor se o sw.js mudou ao abrir,
