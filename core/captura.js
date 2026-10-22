@@ -1,7 +1,10 @@
 // Captura ao vivo a 32 kHz (a taxa do modelo), do microfone ou de um arquivo tocado em tempo real.
 // O AudioContext é criado já em 32 kHz: o navegador reamostra a entrada, e o espectrograma e o
 // modelo veem o mesmo sinal. Cada bloco de áudio chega em onBloco(Float32Array).
+// onEvento(tipo, dados) recebe as mudanças do AudioContext e da trilha do microfone (observabilidade, F1):
+// "mute" na trilha é o sinal direto de que outro app pegou o microfone ou o sistema cortou a entrada.
 import { SR } from "./ranking.js";
+import { ajustesMicrofone } from "./observabilidade.js";
 
 const CODIGO_WORKLET = `
 class Coletor extends AudioWorkletProcessor {
@@ -14,10 +17,12 @@ class Coletor extends AudioWorkletProcessor {
 registerProcessor("coletor", Coletor);`;
 
 export class Captura {
-  constructor({ onBloco }) { this.onBloco = onBloco; }
+  constructor({ onBloco, onEvento }) { this.onBloco = onBloco; this.onEvento = onEvento; }
 
   async preparar() {
     this.ctx = new AudioContext({ sampleRate: SR, latencyHint: "interactive" });
+    const ctx = this.ctx;
+    ctx.onstatechange = () => this.onEvento?.("audiocontext", { estado: ctx.state });
     const url = URL.createObjectURL(new Blob([CODIGO_WORKLET], { type: "text/javascript" }));
     await this.ctx.audioWorklet.addModule(url);
     URL.revokeObjectURL(url);
@@ -43,8 +48,17 @@ export class Captura {
     this.fonte = this.ctx.createMediaStreamSource(this.stream);
     this.fonte.connect(this.entrada);
     await this.ctx.resume();
-    const ajustes = this.stream.getAudioTracks()[0].getSettings();
-    return { origem: "microfone", taxaMicrofone: ajustes.sampleRate || null, taxaAnalise: this.ctx.sampleRate };
+    const trilha = this.stream.getAudioTracks()[0];
+    for (const ev of ["mute", "unmute", "ended"])
+      trilha.addEventListener(ev, () => this.onEvento?.("microfone", { evento: ev, ajustes: ajustesMicrofone(trilha) }));
+    const ajustes = ajustesMicrofone(trilha);
+    return { origem: "microfone", taxaMicrofone: ajustes.sampleRate || null, taxaAnalise: this.ctx.sampleRate,
+             microfone: ajustes, contexto: this.infoContexto() };
+  }
+
+  infoContexto() {
+    const c = this.ctx;
+    return c ? { estado: c.state, taxa: c.sampleRate, latenciaBaseS: c.baseLatency ?? null, latenciaSaidaS: c.outputLatency ?? null } : null;
   }
 
   // Toca um arquivo em tempo real pelo mesmo caminho do microfone (para testar e demonstrar).
@@ -58,7 +72,8 @@ export class Captura {
     this.fonte.onended = () => aoTerminar?.();
     await this.ctx.resume();
     this.fonte.start();
-    return { origem: "arquivo", duracaoS: buffer.duration, taxaAnalise: this.ctx.sampleRate };
+    return { origem: "arquivo", duracaoS: buffer.duration, taxaAnalise: this.ctx.sampleRate, taxaArquivo: buffer.sampleRate,
+             canaisArquivo: buffer.numberOfChannels, contexto: this.infoContexto() };
   }
 
   async parar() {

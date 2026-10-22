@@ -14,8 +14,10 @@ export class Acumulador {
   }
 
   // acustico: Float32Array de uma janela; prior: alinhado ao modelo de som, ou null sem localização.
+  // Devolve os índices que entraram na lista nesta janela (para a observabilidade; a regra não muda).
   adicionar(acustico, prior, tempoS) {
     this.janelas++;
+    const entraram = [];
     for (let i = 0; i < acustico.length; i++) {
       const a = acustico[i];
       if (a < PISO) continue;
@@ -27,12 +29,16 @@ export class Acumulador {
       if (f > r.melhorFinal) r.melhorFinal = f;
       if (a > r.melhorAcustico) r.melhorAcustico = a;
       if (f >= this.limiar) { r.acima++; r.ultimaS = tempoS; }
+      if (!r.entrouS && this.naLista(r)) { r.entrouS = tempoS; entraram.push(i); }
     }
+    return entraram;
   }
+
+  naLista(r) { return r.acima >= this.minJanelas || r.melhorFinal >= this.imediato; }
 
   lista(tempoS, n = 5) {
     return [...this.especies.values()]
-      .filter((r) => r.acima >= this.minJanelas || r.melhorFinal >= this.imediato)
+      .filter((r) => this.naLista(r))
       .sort((a, b) => b.melhorFinal - a.melhorFinal)
       .slice(0, n)
       .map((r) => ({ ...r, ativa: tempoS - r.ultimaS <= this.ativaS }));

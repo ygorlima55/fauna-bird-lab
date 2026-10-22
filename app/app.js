@@ -20,8 +20,9 @@ import { rotuloDoNome, linhaRelatorio, metricasTopK, paraCsv } from "../core/rel
 import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
+import { SCHEMA_OBS, DETECTOR_EVENTOS, perfilAparelho, Diario, metricasJanela } from "../core/observabilidade.js";
 
-const VERSAO_APP = "0.8.1";
+const VERSAO_APP = "0.8.3";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -204,12 +205,21 @@ async function analisarJanela() {
       if (estado.msJanela.length > 10) estado.msJanela.shift();
     }
     ajustarPasso();
-    estado.acum.adicionar(r.maximo, estado.prior, tempoS);
+    const entraram = estado.acum.adicionar(r.maximo, estado.prior, tempoS);
     const tj = r.topJanelas[0];
-    estado.janelasSessao.push({ fimS: +tempoS.toFixed(2), top: tj.indices.map((i, k) => [estado.motor.rotulos[i].especie, +tj.escores[k].toFixed(4)]) });
+    // top-5 acústico da janela com [espécie, acústico, prior, final]; os dois primeiros mantêm o formato antigo
+    const quatro = (i, a) => {
+      const p = estado.prior ? estado.prior[i] : null;
+      return [estado.motor.rotulos[i].especie, +a.toFixed(4), p == null ? null : +p.toFixed(4),
+              +(p == null ? a : a * Math.pow(Math.min(Math.max(p, 0), 1), ALFA)).toFixed(4)];
+    };
+    estado.janelasSessao.push({ fimS: +tempoS.toFixed(2), top: tj.indices.map((i, k) => quatro(i, tj.escores[k])),
+      ms: Math.round(ms), passoS: estado.passoS, ...metricasJanela(pcm),
+      ...(entraram.length ? { entraram: entraram.map((i) => estado.motor.rotulos[i].especie) } : {}) });
     desenharLista(tempoS);
     desenharEstado();
   } catch (e) {
+    estado.diario?.erro("analisarJanela", e);
     $("estado").textContent = "Erro na análise: " + e.message;
   } finally {
     estado.ocupado = false;
@@ -221,9 +231,10 @@ async function analisarJanela() {
 function ajustarPasso() {
   const ult = estado.msJanela.slice(-3);
   if (ult.length < 3) return;
-  const media = ult.reduce((a, b) => a + b, 0) / ult.length;
+  const media = ult.reduce((a, b) => a + b, 0) / ult.length, antes = estado.passoS;
   if (media > estado.passoS * 1000 * 0.9 && estado.passoS < 3) { estado.passoS++; estado.msJanela = []; }
   else if (estado.passoS > 1 && media < (estado.passoS - 1) * 1000 * 0.6) { estado.passoS--; estado.msJanela = []; }
+  if (estado.passoS !== antes) estado.diario?.evento("passo", { de: antes, para: estado.passoS, msMedia: Math.round(media) });
 }
 
 // ---------- microfone mudo ----------
@@ -354,13 +365,19 @@ document.addEventListener("visibilitychange", () => {
   if (!estado.rodando) return;
   const visivel = document.visibilityState === "visible";
   estado.mudo?.tela.push({ tS: +(estado.anel.total / SR).toFixed(1), quando: new Date().toISOString(), tela: visivel ? "voltou" : "saiu" });
+  estado.diario?.evento("tela", { visivel, audiocontext: estado.captura?.ctx?.state || null });
   if (visivel) manterTelaLigada(true);
 });
+// eventos da página durante a escuta (observabilidade): página congelada pelo sistema, saída, rede
+for (const [alvo, ev] of [[document, "freeze"], [document, "resume"], [window, "pagehide"], [window, "online"], [window, "offline"]])
+  alvo.addEventListener(ev, () => { if (estado.rodando) estado.diario?.evento("pagina", { evento: ev, audiocontext: estado.captura?.ctx?.state || null }); });
 
 async function iniciar(fonte, bytes, nomeArquivo) {
   Object.assign(estado, { anel: new Anel(JANELA_S + 1), acum: new Acumulador({ limiar: LIMIAR }), ultimaPos: 0, msJanela: [], msTodas: [],
     passoS: 1, blocos: [], janelasSessao: [], inicio: new Date().toISOString(), fonte, nomeArquivo: nomeArquivo || null, mudo: novoMudo() });
-  estado.captura = new Captura({ onBloco: aoBloco });
+  estado.diario = new Diario(() => (estado.anel ? estado.anel.total / SR : 0));
+  estado.diario.evento("inicio", { fonte, online: navigator.onLine, visivel: document.visibilityState === "visible" });
+  estado.captura = new Captura({ onBloco: aoBloco, onEvento: (tipo, dados) => estado.diario?.evento(tipo, dados) });
   espectro.limpar();
   $("salvo").hidden = true;
   try {
@@ -377,6 +394,7 @@ async function iniciar(fonte, bytes, nomeArquivo) {
     desenharLista(0);
     desenharEstado();
   } catch (e) {
+    estado.diario.erro("iniciar", e);
     await estado.captura.parar();
     $("estado").textContent = fonte === "microfone" ? "Microfone indisponível ou negado: " + e.message : "Não foi possível abrir o arquivo: " + e.message;
   }
@@ -384,6 +402,7 @@ async function iniciar(fonte, bytes, nomeArquivo) {
 
 async function parar() {
   if (!estado.rodando) return;
+  estado.diario?.evento("parar", { audiocontext: estado.captura?.ctx?.state || null });
   estado.rodando = false;
   manterTelaLigada(false);
   espectro.desligar();
@@ -423,6 +442,8 @@ async function salvarAoVivo() {
       msPorJanela: estado.msTodas.length ? Math.round(estado.msTodas.reduce((a, b) => a + b, 0) / estado.msTodas.length) : null,
       passoFinalS: estado.passoS, snrDb: snrAproximado(pcm, SR), assinatura: figura.assinatura(), sha256Audio: await sha256(wav), bytesAudio: wav.size,
       silencio: resumoMudo(estado.mudo, tempoS),
+      obs: blocoObs({ acumulador: { limiar: estado.acum.limiar, minJanelas: estado.acum.minJanelas, imediato: estado.acum.imediato, piso: 0.05 },
+                      passoS: { inicial: 1, final: estado.passoS } }),
     };
     await salvarSessao(sessao, { audio: wav, sonograma: await sonogramaPng(pcm, SR) });
     const repetidas = await registrarImpressao(sessao, pcm);
@@ -433,8 +454,19 @@ async function salvarAoVivo() {
     estado.ultimaSessao = sessao.id;
     $("lista").dataset.sessao = sessao.id;   // tocar numa espécie da lista abre a ficha já com "comparar"
   } catch (e) {
+    estado.diario?.erro("salvar", e);
     $("salvo").textContent = "Erro ao salvar: " + e.message;
   }
+}
+
+// Bloco de observabilidade gravado na sessão (F1; schema em knowledge/schemas/sessao_observabilidade.schema.json).
+function blocoObs(extra = {}, diario = estado.diario) {
+  return {
+    schema: SCHEMA_OBS, app: VERSAO_APP, perfil: estado.perfil || null, motor: estado.motorInfo || null,
+    captura: estado.infoCaptura || null, detectorEventos: DETECTOR_EVENTOS,
+    prior: estado.prior ? { semana: semanaBirdnet(new Date()), alfa: ALFA, minimoExibicao: PRIOR_MINIMO } : null,
+    ...extra, ...(diario ? diario.resumo() : { eventos: [], erros: [] }),
+  };
 }
 
 $("btn-gravar").onclick = async () => {
@@ -494,6 +526,7 @@ async function importar(arquivos) {
         especies, janelas: r.topJanelas.map((j) => ({ inicioS: j.inicioS, top: j.indices.map((i, q) => [estado.motor.rotulos[i].especie, +j.escores[q].toFixed(4)]) })),
         nJanelas: r.janelas, msPorJanela: linha.msPorJanela, snrDb: linha.snrDb, relatorio: linha,
         sha256Audio: await sha256(wav), bytesAudio: wav.size,
+        obs: blocoObs({ captura: { origem: "importado", taxaArquivo: buffer.sampleRate, canaisArquivo: buffer.numberOfChannels, taxaAnalise: SR } }, null),
       };
       await salvarSessao(sessaoImp, { audio: wav, sonograma: await sonogramaPng(pcm, SR) });
       const repetidas = await registrarImpressao(sessaoImp, pcm);
@@ -1063,6 +1096,7 @@ $("btn-instalar").onclick = async () => {
 // ---------- início ----------
 async function iniciarApp() {
   $("versao-app").textContent = VERSAO_APP;
+  perfilAparelho().then((p) => { estado.perfil = p; }).catch(() => {});
   chip("chip-modelo", "aviso", "carregando");
   try {
     estado.motor = new MotorBirdNET(MODELOS);
@@ -1071,6 +1105,8 @@ async function iniciarApp() {
       fetch(MODELOS + "nomes-pt.json").then((r) => r.json()).catch(() => ({})),
     ]);
     estado.nomes = nomes;
+    estado.motorInfo = { classes: info.classes, threads: info.threads, msCarregar: info.msCarregar, semPrior: info.semPrior ?? null,
+                         controladoPeloSW: !!navigator.serviceWorker?.controller };
     chip("chip-modelo", "ok", `modelo · ${info.threads} thread${info.threads > 1 ? "s" : ""}`);
     $("btn-gravar").disabled = false;
     botaoGravar("Toque para identificar");
