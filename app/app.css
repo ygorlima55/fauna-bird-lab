@@ -1,0 +1,190 @@
+/* Fauna Bird Lab 0.6 · tela de um botão e figura do canto.
+   Escuro (padrão) = noite de campo: partículas ciano e ouro sobre preto, bom para tela OLED.
+   Claro = papel com orbitais: vermelho e violeta. Fontes do sistema (o app roda offline). */
+:root {
+  --fundo: #04060A; --cartao: #0B1018; --cartao2: #101826; --borda: #1B2636; --texto: #E4ECF5; --suave: #8494AA;
+  --pri: #2F7BF0; --pri2: #0B3DB5; --vivo: #4FD2F2; --sobre-pri: #FFFFFF;
+  --ok: #5FD39A; --aviso: #E8C45C; --iris: #F07A5E;
+  --p1: #2C63E0; --p2: #4FD2F2; --p3: #E8C45C; --modo: escuro;
+  --halo-a: #0C2C72; --halo-b: #04060A; --sombra: rgba(0,0,0,.55);
+  --raio: 16px;
+  --f-titulo: "Segoe UI Variable Display", "SF Pro Display", "Roboto Flex", system-ui, sans-serif;
+  --f-texto: system-ui, "Segoe UI", Roboto, sans-serif;
+  --f-mono: ui-monospace, "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --fundo: #EEEDEB; --cartao: #F8F7F5; --cartao2: #F1EEEA; --borda: #DAD6D1; --texto: #17121B; --suave: #6A6370;
+    --pri: #D8392B; --pri2: #3A2470; --vivo: #C2321F; --sobre-pri: #FFFFFF;
+    --ok: #1F7A55; --aviso: #8A6410; --iris: #B8321F;
+    --p1: #E5826F; --p2: #D8392B; --p3: #3A2470; --modo: claro;
+    --halo-a: #FBF7F4; --halo-b: #EEEDEB; --sombra: rgba(40,20,30,.16);
+    color-scheme: light;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.45 var(--f-texto);
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--vivo); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-size: .85em; }
+h2 { font-family: var(--f-titulo); font-size: 1.15rem; font-weight: 700; margin: 0 0 .6em; }
+a { color: var(--vivo); }
+
+/* topo */
+header.topo { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: color-mix(in srgb, var(--fundo) 86%, transparent); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 5; }
+header.topo .nome { font-family: var(--f-titulo); font-weight: 800; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; }
+header.topo .nome small { display: block; font-family: var(--f-texto); font-weight: 400; font-size: .75rem; color: var(--suave); }
+.chips { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { font: .7rem var(--f-mono); display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px;
+  border: 1px solid var(--borda); color: var(--texto); }
+.chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--suave); }
+.chip.ok i { background: var(--ok); } .chip.aviso i { background: var(--aviso); } .chip.erro i { background: var(--iris); }
+
+main { max-width: 720px; margin: 0 auto; padding: 4px 16px 24px; }
+.cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: var(--raio); padding: 16px; margin-bottom: 14px; }
+summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.suave { color: var(--suave); font-size: .88rem; }
+
+/* ===== tela Ouvir ===== */
+.ouvir { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 0 22px; margin: 0 -16px 14px;
+  background: radial-gradient(110% 70% at 50% 46%, var(--halo-a), var(--halo-b) 72%); }
+.chamada { font: 800 1.6rem/1.15 var(--f-titulo); letter-spacing: -.01em; text-align: center; margin: 6px 16px 0; text-wrap: balance; }
+.palpite { font: .82rem var(--f-mono); color: var(--vivo); min-height: 1.3em; margin: 0 16px; text-align: center; }
+.orbe { position: relative; width: min(330px, 92vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+.orbe canvas { position: absolute; inset: -6%; width: 112%; height: 112%; pointer-events: none; }
+.bt-ouvir { position: relative; width: 44%; aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, var(--pri), var(--pri2)); color: var(--sobre-pri);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--pri) 18%, transparent), 0 18px 40px var(--sombra);
+  transition: transform .35s cubic-bezier(.3,.7,.2,1); -webkit-tap-highlight-color: transparent; }
+.bt-ouvir:hover { transform: scale(1.04); }
+.bt-ouvir:disabled { cursor: wait; filter: saturate(.4); opacity: .75; }
+.bt-ouvir .ic-marca { width: 52%; height: 52%; }
+.bt-ouvir .ic-parar { display: none; width: 28%; height: 28%; border-radius: 6px; background: currentColor; }
+.bt-ouvir.parar .ic-marca { display: none; }
+.bt-ouvir.parar .ic-parar { display: block; }
+.orbe.ouvindo .bt-ouvir { animation: pulsa 1.1s ease-in-out infinite; }
+@keyframes pulsa { 50% { transform: scale(.94); } }
+.anel-o { position: absolute; left: 28%; top: 28%; width: 44%; height: 44%; border-radius: 50%; border: 1.5px solid var(--vivo);
+  opacity: 0; pointer-events: none; }
+.orbe.ouvindo .anel-o { animation: onda 2.2s ease-out infinite; }
+.orbe.ouvindo .anel-o:nth-of-type(2) { animation-delay: .73s; }
+.orbe.ouvindo .anel-o:nth-of-type(3) { animation-delay: 1.46s; }
+@keyframes onda { 0% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(2.1); } }
+.ouvir .estado { text-align: center; margin: 0 16px; font-size: .75rem; }
+.ouvir .salvo { text-align: center; margin: 4px 16px 0; }
+.controles.centro { justify-content: center; margin-top: 8px; }
+.aviso-exp { font: .7rem var(--f-mono); color: var(--suave); margin: 10px 16px 0; text-align: center; }
+
+.espectro { position: relative; height: 150px; border-radius: 10px; overflow: hidden; }
+.espectro canvas { width: 100%; height: 100%; display: block; }
+.eixo { position: absolute; top: 0; bottom: 0; left: 6px; display: flex; flex-direction: column; justify-content: space-between;
+  font: .7rem var(--f-mono); color: rgba(255,255,255,.7); padding: 2px 0; pointer-events: none; }
+
+.controles { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.btn { border: 1.5px solid var(--borda); background: transparent; color: var(--texto); border-radius: 999px; padding: 9px 18px;
+  font-weight: 600; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.btn:hover { border-color: var(--suave); }
+.btn.primario { background: var(--pri); border-color: var(--pri); color: var(--sobre-pri); }
+.btn.grande { flex: 1; font-size: 1.05rem; }
+.btn.parar { background: var(--iris); border-color: var(--iris); }
+.btn:disabled { opacity: .55; cursor: wait; }
+.estado { margin: 10px 0 0; color: var(--suave); min-height: 1.3em; }
+
+/* lista de espécies */
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--borda); }
+.lista li:first-child { border-top: 0; }
+.lista li:first-child:not(.vazio) .nome { font: 800 1.3rem var(--f-titulo); }
+.lista li:first-child:not(.vazio) .escore { color: var(--vivo); }
+.lista .vazio { display: block; color: var(--suave); }
+.lista .nome { font-weight: 700; }
+.lista .cient { font-style: italic; color: var(--suave); font-size: .9rem; grid-column: 1; }
+.lista .escore { grid-row: 1 / span 2; grid-column: 2; text-align: right; font: 600 1.1rem var(--f-mono); font-variant-numeric: tabular-nums; }
+.lista .barra { grid-column: 1 / -1; height: 6px; background: var(--borda); border-radius: 3px; overflow: hidden; }
+.lista .barra b { display: block; height: 100%; background: linear-gradient(90deg, var(--p1), var(--p2)); border-radius: 3px; }
+.lista .detalhe { grid-column: 1 / -1; font-size: .78rem; color: var(--suave); }
+.lista .ativa .nome::after { content: "ouvindo agora"; margin-left: 8px; font: 600 .68rem var(--f-texto); color: var(--fundo);
+  background: var(--vivo); padding: 1px 7px; border-radius: 99px; vertical-align: middle; }
+.lista .fora .detalhe { color: var(--iris); }
+
+.linha { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.linha label { display: flex; flex-direction: column; font-size: .85rem; flex: 1; min-width: 130px; }
+.linha input { padding: 8px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); }
+
+/* abas: barra de ícones no rodapé */
+.abas { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex;
+  background: color-mix(in srgb, var(--cartao) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--borda);
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.abas button { flex: 1; min-height: 52px; border: 0; background: none; cursor: pointer; color: var(--suave);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .74rem; font-weight: 600; }
+.abas button svg { width: 22px; height: 22px; }
+.abas button[aria-selected="true"] { color: var(--texto); }
+.abas button[aria-selected="true"] svg { color: var(--vivo); }
+.salvo { margin: 8px 0 0; font-size: .9rem; }
+
+/* relatório */
+.tabela { overflow-x: auto; margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+th, td { border-bottom: 1px solid var(--borda); padding: 6px 8px; text-align: left; vertical-align: top; }
+th { color: var(--suave); font-weight: 600; }
+table.metricas { margin: 8px 0; }
+.falha { color: var(--iris); }
+
+/* histórico */
+.historico { list-style: none; margin: 0; padding: 0; }
+.historico li { border-top: 1px solid var(--borda); }
+.historico li:first-child { border-top: 0; }
+.historico .vazio { color: var(--suave); padding: 8px 0; }
+.historico .item { width: 100%; text-align: left; background: none; border: 0; padding: 10px 0; cursor: pointer; display: grid; gap: 2px; min-height: 44px; }
+.historico .item.com-figura { grid-template-columns: 56px minmax(0, 1fr); column-gap: 12px; }
+.historico .item.com-figura > span { grid-column: 2; }
+.historico .mini { grid-row: 1 / span 3; width: 56px; height: 56px; border-radius: 14px; background: var(--fundo); align-self: center; }
+.historico .quando { font-size: .8rem; color: var(--suave); }
+.historico .nome { font-weight: 700; }
+.figura-sessao { background: var(--fundo); border-radius: 12px; margin-bottom: 10px; padding-bottom: 6px; }
+.figura-sessao canvas { width: 100%; height: 220px; display: block; }
+.figura-sessao p { margin: 0 12px; }
+.sonograma { width: 100%; height: 140px; object-fit: fill; border: 1px solid var(--borda); border-radius: 10px; display: block; image-rendering: auto; }
+#detalhe audio { width: 100%; margin: 10px 0; }
+
+.btn.instalar { margin-top: 10px; border-style: dashed; }
+
+/* ficha de campo */
+.ficha { border-top: 1px solid var(--borda); margin-top: 12px; padding-top: 10px; display: grid; gap: 8px; }
+.ficha h3 { font-family: var(--f-titulo); margin: 0; font-size: 1rem; }
+.ficha label { display: flex; flex-direction: column; font-size: .85rem; gap: 3px; flex: 1; min-width: 140px; }
+.ficha input, .ficha textarea, .ficha select { padding: 8px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); min-height: 40px; }
+.ficha .linha { margin-top: 0; }
+#btn-planilha { margin-bottom: 8px; }
+
+/* espécies */
+.busca { width: 100%; padding: 10px 14px; border: 1px solid var(--borda); border-radius: 999px; background: var(--fundo); min-height: 44px; }
+.resultados { list-style: none; margin: 6px 0 0; padding: 0; }
+.resultados li button { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--borda); padding: 9px 2px; cursor: pointer; min-height: 44px; }
+.resultados i { color: var(--suave); }
+[data-especie] { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.fotos { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+.fotos figure { margin: 0; flex: 0 0 78%; max-width: 320px; scroll-snap-align: start; }
+.fotos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: var(--borda); display: block; }
+.fotos figcaption, .credito { font-size: .74rem; color: var(--suave); margin-top: 3px; }
+.sons { list-style: none; margin: 0; padding: 0; }
+.sons li { border-top: 1px solid var(--borda); padding: 8px 0; }
+.sons audio { width: 100%; height: 40px; }
+.selo { display: inline-block; font-size: .7rem; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--borda); margin-left: 4px; }
+.selo.nc { border-color: var(--aviso); color: var(--aviso); }
+.semelhanca { font: 600 1rem var(--f-mono); float: right; }
+.links-externos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.links-externos a { font-size: .9rem; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* envio para a pesquisa (diálogo) */
+.aviso-exp a { color: inherit; }
+.dialogo { border: 1px solid var(--borda); border-radius: 14px; background: var(--cartao); color: var(--texto); max-width: 560px; width: calc(100% - 32px); padding: 16px; }
+.dialogo::backdrop { background: rgba(0, 0, 0, .6); }
+.ficha .marca { flex-direction: row; align-items: flex-start; gap: 8px; font-size: .9rem; }
+.ficha .marca input { min-height: auto; margin-top: 3px; }

@@ -1,0 +1,15 @@
+Componentes de terceiros incluídos neste repositório
+
+1. Modelos BirdNET+ (modelos/birdnet-plus-v3/)
+   BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16 e BirdNET+ Geomodel V3.0.4 Global 10K-pruned FP16,
+   rótulos e nomes populares derivados da taxonomia do projeto birdnet-live-app.
+   K. Lisa Yang Center for Conservation Bioacoustics (Cornell Lab of Ornithology) e Chemnitz University of Technology.
+   Fonte: https://github.com/birdnet-team/birdnet-live-app (assets/models)
+   Licença: Apache License 2.0 (modelos/birdnet-plus-v3/MODEL_LICENSE). Arquivos de modelo não modificados;
+   nomes-pt.json é um extrato (nome científico -> nome em português) de taxonomy.csv do mesmo projeto.
+
+2. ONNX Runtime Web 1.30.0 (vendor/onnxruntime-web-1.30.0/)
+   Copyright (c) Microsoft Corporation. Licença MIT (vendor/onnxruntime-web-1.30.0/LICENSE).
+
+3. Conteúdo exibido na aba Espécies (não incluído no repositório; buscado em tempo de uso)
+   iNaturalist e Wikimedia Commons: cada foto, som e texto é mostrado com autor, licença e link de origem.

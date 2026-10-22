@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EEEDEB" media="(prefers-color-scheme: light)">
+<title>Fauna Bird Lab</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="marca" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"><path d="M22 44c-6-6-6-18 0-24"/><path d="M14 52C3 41 3 23 14 12"/><path d="M42 20c6 6 6 18 0 24"/><path d="M50 12c11 11 11 29 0 40"/></g><path d="M25 36c2-8 9-12 15-10l5-3-2 6c1 6-4 11-11 11h-8z" fill="currentColor"/></symbol>
+    <symbol id="i-ouvir" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM6 11a6 6 0 0 0 12 0M12 17v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-arq" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 14l3-3 3 3M12 11v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-livro" viewBox="0 0 24 24"><path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1zM12 6v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="topo">
+  <div class="nome">Fauna Bird Lab<small id="subtitulo">Identificar por Som</small></div>
+  <div class="chips">
+    <span class="chip" id="chip-modelo"><i></i>modelo</span>
+    <span class="chip" id="chip-local"><i></i>local</span>
+    <span class="chip" id="chip-rede"><i></i>rede</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ OUVIR ============ -->
+  <div class="aba" id="aba-som">
+    <section class="ouvir">
+      <p class="chamada" id="chamada">Carregando modelo…</p>
+      <p class="palpite" id="palpite" aria-live="polite"></p>
+      <div class="orbe" id="orbe">
+        <canvas id="figura" aria-hidden="true"></canvas>
+        <span class="anel-o"></span><span class="anel-o"></span><span class="anel-o"></span>
+        <button class="bt-ouvir" id="btn-gravar" disabled aria-label="Carregando modelo…">
+          <svg class="ic-marca" aria-hidden="true"><use href="#marca"/></svg>
+          <span class="ic-parar" aria-hidden="true"></span>
+        </button>
+      </div>
+      <p class="estado mono" id="estado">—</p>
+      <p class="salvo" id="salvo" hidden></p>
+      <div class="controles centro">
+        <label class="btn" id="btn-arquivo">Tocar arquivo<input type="file" id="arquivo" accept="audio/*,video/*" hidden></label>
+      </div>
+      <button class="btn instalar" id="btn-instalar" hidden>Instalar app na tela inicial</button>
+      <p class="aviso-exp">Versão de teste · escore do modelo não é probabilidade · <a href="privacidade.html">privacidade</a></p>
+    </section>
+
+    <section class="cartao">
+      <div class="espectro">
+        <canvas id="espectro" aria-label="Espectrograma ao vivo, 0 a 12 kHz"></canvas>
+        <div class="eixo"><span>12 kHz</span><span>6</span><span>0</span></div>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Possíveis espécies</h2>
+      <ol class="lista" id="lista"><li class="vazio">Toque no botão e grave alguns segundos de canto para ver sugestões.</li></ol>
+      <p class="suave">Entram na lista as espécies acima de 0,35 em pelo menos 2 janelas de 3 s (ou acima de 0,98 em uma).
+        “Final” = escore do som × (chance de ocorrer no local e na semana)<sup>0,5</sup>. Sempre confirme pelo canto e pela observação.
+        Ao parar, a sessão é salva no aparelho (áudio, espécies, escores, sonograma, figura do canto, local e horário).</p>
+      <p class="suave">A figura do canto é desenhada a partir do som medido: mais agudo dá mais ondulações, faixa mais larga dá mais camadas,
+        notas que sobem ou descem inclinam a figura. Ela não identifica a espécie.</p>
+    </section>
+  </div>
+
+  <!-- ============ IMPORTAR ============ -->
+  <div class="aba" id="aba-importar" hidden>
+    <section class="cartao">
+      <h2>Importar gravações</h2>
+      <p class="suave">MP3, WAV, M4A, FLAC (e outros que o navegador abrir). Cada arquivo é convertido para 32 kHz mono,
+        analisado em janelas de 3 s (passo 1 s) e salvo no histórico. Se o nome do arquivo tiver o nome científico
+        (ex.: <span class="mono">Pitangus_sulphuratus_XC248804.mp3</span>) ou o nome popular, ele vira o <b>rótulo provisório</b>
+        e entra no cálculo de TOP-1/3/5.</p>
+      <div class="controles">
+        <label class="btn primario grande">Escolher arquivos<input type="file" id="importar" accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.opus" multiple hidden></label>
+      </div>
+      <p class="estado mono" id="estado-importar">—</p>
+    </section>
+    <section class="cartao" id="relatorio" hidden>
+      <h2>Relatório</h2>
+      <div id="metricas"></div>
+      <div class="tabela"><table id="tabela-relatorio"></table></div>
+      <div class="controles">
+        <button class="btn" id="btn-csv">Baixar CSV</button>
+        <button class="btn" id="btn-json">Baixar JSON</button>
+        <button class="btn" id="btn-relatorio-todos">Somar todos os importados</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ HISTÓRICO ============ -->
+  <div class="aba" id="aba-historico" hidden>
+    <section class="cartao" id="detalhe" hidden></section>
+    <section class="cartao">
+      <h2>Sessões salvas</h2>
+      <p class="suave" id="espaco">—</p>
+      <button class="btn" id="btn-planilha">Exportar para a planilha Merlin × Bird Lab (CSV)</button>
+      <ol class="historico" id="historico"></ol>
+    </section>
+  </div>
+
+  <!-- ============ ESPÉCIES ============ -->
+  <div class="aba" id="aba-especies" hidden>
+    <section class="cartao">
+      <h2>Espécies</h2>
+      <input id="busca-especie" class="busca" type="search" placeholder="nome popular ou científico (ex.: bem-te-vi)" autocomplete="off">
+      <ul class="resultados" id="resultados-busca"></ul>
+      <p class="suave">Fotos e sons de fontes abertas (iNaturalist e Wikimedia Commons), sempre com autor e licença.
+        As fichas abertas com internet ficam guardadas para usar sem sinal. WikiAves e xeno-canto abrem no site deles.</p>
+    </section>
+    <section class="cartao" id="ficha-especie" hidden></section>
+  </div>
+
+  <details class="cartao">
+    <summary>Localização usada no filtro</summary>
+    <p id="local-texto" class="suave">—</p>
+    <div class="linha">
+      <label>Latitude <input id="lat" inputmode="decimal" placeholder="-16.68"></label>
+      <label>Longitude <input id="lon" inputmode="decimal" placeholder="-49.25"></label>
+    </div>
+    <div class="linha">
+      <button class="btn" id="btn-gps">Usar GPS</button>
+      <button class="btn" id="btn-manual">Usar estes valores</button>
+      <button class="btn" id="btn-sem-local">Sem filtro de local</button>
+    </div>
+  </details>
+
+  <details class="cartao" id="cartao-desempenho">
+    <summary>Desempenho do aparelho</summary>
+    <p class="suave">Mede quanto tempo o modelo leva por janela de 3 s neste aparelho (ao vivo e importando), a memória e o espaço usados.
+      Usa som sintético: mede velocidade, não acerto. Leva cerca de 1 minuto; deixe a tela ligada.</p>
+    <div class="controles">
+      <button class="btn primario" id="btn-medir">Medir agora</button>
+      <button class="btn" id="btn-medir-copiar" hidden>Copiar resultado</button>
+      <button class="btn" id="btn-medir-baixar" hidden>Baixar JSON</button>
+    </div>
+    <p class="estado mono" id="estado-medir">—</p>
+    <div class="tabela"><table id="tabela-medir"></table></div>
+  </details>
+
+  <details class="cartao">
+    <summary>Sobre o modelo</summary>
+    <p class="suave">BirdNET+ V3.0-preview3.1 (9.789 espécies) e Geomodelo V3.0.4 · K. Lisa Yang Center for Conservation
+      Bioacoustics (Cornell) e Chemnitz University of Technology · pesos sob Apache-2.0, distribuídos no
+      <a href="https://github.com/birdnet-team/birdnet-live-app">birdnet-live-app</a>. Nomes em português da taxonomia do mesmo projeto.
+      Roda no aparelho com ONNX Runtime Web (MIT); nenhum som sai do celular sem você mandar.</p>
+    <p class="suave">Fauna Bird Lab · versão de teste <span id="versao-app"></span> · <a href="privacidade.html">Aviso de privacidade</a> ·
+      <a href="creditos.html">Créditos e licenças</a> · contato: agrofort.projetos@gmail.com</p>
+  </details>
+</main>
+
+<nav class="abas" role="tablist">
+  <button role="tab" data-aba="som" aria-selected="true"><svg aria-hidden="true"><use href="#i-ouvir"/></svg>Ouvir</button>
+  <button role="tab" data-aba="importar" aria-selected="false"><svg aria-hidden="true"><use href="#i-arq"/></svg>Importar</button>
+  <button role="tab" data-aba="historico" aria-selected="false"><svg aria-hidden="true"><use href="#i-livro"/></svg>Histórico</button>
+  <button role="tab" data-aba="especies" aria-selected="false"><svg aria-hidden="true"><use href="#i-busca"/></svg>Espécies</button>
+</nav>
+<dialog id="envio-pesquisa" class="dialogo"></dialog>
+<script type="module" src="app.js"></script>
+</body>
+</html>
