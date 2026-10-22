@@ -22,7 +22,9 @@ function comLimite(promessa, ms, oque) {
   return Promise.race([promessa, new Promise((_, nao) => { t = setTimeout(() => nao(new Error(`${oque}: sem resposta em ${ms / 1000} s`)), ms); })])
     .finally(() => clearTimeout(t));
 }
-const quadro = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));   // deixa a tela mostrar a etapa
+// deixa a tela mostrar a etapa; com a aba em segundo plano o navegador não desenha (requestAnimationFrame não
+// dispara), então o tempo limite segue o teste mesmo se a pessoa trocar de app no meio
+const quadro = () => new Promise((r) => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 100); });
 
 async function etapa(nome, fn, { limiteMs = 30000 } = {}) {
   const li = document.createElement("li");

@@ -1,25 +1,28 @@
-/* Fauna Bird Lab 0.6 · tela de um botão e figura do canto.
-   Escuro (padrão) = noite de campo: partículas ciano e ouro sobre preto, bom para tela OLED.
-   Claro = papel com orbitais: vermelho e violeta. Fontes do sistema (o app roda offline). */
+/* Fauna Bird Lab 0.8 · identidade Soldadinho (Antilophia galeata), design system em design/soldadinho.md.
+   Escuro (padrão) = a ave na mata: preto, carmim do topete, verde desfocado ao fundo, galho como linha.
+   Claro = papel de caderno de campo com as mesmas cores. Vermelho só para o que importa: gravar, achado, alerta.
+   Fontes do sistema (o app roda offline): serifa nos títulos no lugar da Gloock. */
 :root {
-  --fundo: #04060A; --cartao: #0B1018; --cartao2: #101826; --borda: #1B2636; --texto: #E4ECF5; --suave: #8494AA;
-  --pri: #2F7BF0; --pri2: #0B3DB5; --vivo: #4FD2F2; --sobre-pri: #FFFFFF;
-  --ok: #5FD39A; --aviso: #E8C45C; --iris: #F07A5E;
-  --p1: #2C63E0; --p2: #4FD2F2; --p3: #E8C45C; --modo: escuro;
-  --halo-a: #0C2C72; --halo-b: #04060A; --sombra: rgba(0,0,0,.55);
+  --fundo: #0D0D0F; --cartao: #16181A; --cartao2: #1C1F21; --borda: #2A2C30; --texto: #F2EDE4; --suave: #A69C8E;
+  --pri: #D7141A; --pri2: #9E0F14; --vivo: #F0453F; --sobre-pri: #F2EDE4;
+  --ok: #8DB066; --aviso: #E0B44C; --iris: #F08A4B;
+  --p1: #3E5A2C; --p2: #7FA05A; --p3: #D7141A; --modo: escuro;
+  --halo-a: #1B2716; --halo-b: #0D0D0F; --sombra: rgba(0,0,0,.55);
+  --mata: #3E5A2C; --folha: #7FA05A; --galho: #C9B79C; --ave: #0D0D0F; --topete: #F2EDE4;
   --raio: 16px;
-  --f-titulo: "Segoe UI Variable Display", "SF Pro Display", "Roboto Flex", system-ui, sans-serif;
-  --f-texto: system-ui, "Segoe UI", Roboto, sans-serif;
-  --f-mono: ui-monospace, "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+  --f-titulo: "Gloock", "Iowan Old Style", Georgia, "Noto Serif", "Times New Roman", serif;
+  --f-texto: "Figtree", system-ui, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "DM Mono", ui-monospace, "Cascadia Mono", "Roboto Mono", Consolas, monospace;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root {
-    --fundo: #EEEDEB; --cartao: #F8F7F5; --cartao2: #F1EEEA; --borda: #DAD6D1; --texto: #17121B; --suave: #6A6370;
-    --pri: #D8392B; --pri2: #3A2470; --vivo: #C2321F; --sobre-pri: #FFFFFF;
-    --ok: #1F7A55; --aviso: #8A6410; --iris: #B8321F;
-    --p1: #E5826F; --p2: #D8392B; --p3: #3A2470; --modo: claro;
-    --halo-a: #FBF7F4; --halo-b: #EEEDEB; --sombra: rgba(40,20,30,.16);
+    --fundo: #F2EDE4; --cartao: #FBF8F2; --cartao2: #F6F1E8; --borda: #DDD3C4; --texto: #17130F; --suave: #6B6155;
+    --pri: #C21017; --pri2: #7E0B10; --vivo: #B0121A; --sobre-pri: #FBF8F2;
+    --ok: #3E5A2C; --aviso: #8A6410; --iris: #B4441C;
+    --p1: #7FA05A; --p2: #3E5A2C; --p3: #C21017; --modo: claro;
+    --halo-a: #E3EAD6; --halo-b: #F2EDE4; --sombra: rgba(40,30,20,.16);
+    --mata: #3E5A2C; --folha: #5F7F3E; --galho: #8C7A5E; --ave: #17130F; --topete: #FBF8F2;
     color-scheme: light;
   }
 }
@@ -29,13 +32,14 @@ body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.45
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--vivo); outline-offset: 2px; }
 .mono { font-family: var(--f-mono); font-size: .85em; }
-h2 { font-family: var(--f-titulo); font-size: 1.15rem; font-weight: 700; margin: 0 0 .6em; }
+h2 { font-family: var(--f-titulo); font-size: 1.3rem; font-weight: 400; margin: 0 0 .6em; }
 a { color: var(--vivo); }
 
 /* topo */
 header.topo { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
   background: color-mix(in srgb, var(--fundo) 86%, transparent); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 5; }
-header.topo .nome { font-family: var(--f-titulo); font-weight: 800; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; }
+header.topo .simbolo { width: 30px; height: 30px; flex: none; color: var(--texto); --topete: var(--pri); }
+header.topo .nome { font-family: var(--f-titulo); font-weight: 400; font-size: 1.2rem; line-height: 1.1; white-space: nowrap; }
 header.topo .nome small { display: block; font-family: var(--f-texto); font-weight: 400; font-size: .75rem; color: var(--suave); }
 .chips { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .chip { font: .7rem var(--f-mono); display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 99px;
@@ -50,25 +54,31 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 
 /* ===== tela Ouvir ===== */
 .ouvir { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 0 22px; margin: 0 -16px 14px;
-  background: radial-gradient(110% 70% at 50% 46%, var(--halo-a), var(--halo-b) 72%); }
-.chamada { font: 800 1.6rem/1.15 var(--f-titulo); letter-spacing: -.01em; text-align: center; margin: 6px 16px 0; text-wrap: balance; }
+  background:   /* mata desfocada atrás da ave (bokeh) */
+    radial-gradient(70px 70px at 14% 22%, color-mix(in srgb, var(--folha) 22%, transparent), transparent 70%),
+    radial-gradient(110px 110px at 88% 30%, color-mix(in srgb, var(--mata) 40%, transparent), transparent 70%),
+    radial-gradient(90px 90px at 80% 82%, color-mix(in srgb, var(--folha) 16%, transparent), transparent 70%),
+    radial-gradient(110% 70% at 50% 46%, var(--halo-a), var(--halo-b) 72%);
+  border-bottom: 1px solid color-mix(in srgb, var(--galho) 35%, transparent); }
+.chamada { font: 400 1.75rem/1.15 var(--f-titulo); text-align: center; margin: 6px 16px 0; text-wrap: balance; }
 .palpite { font: .82rem var(--f-mono); color: var(--vivo); min-height: 1.3em; margin: 0 16px; text-align: center; }
 .orbe { position: relative; width: min(330px, 92vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
 .orbe canvas { position: absolute; inset: -6%; width: 112%; height: 112%; pointer-events: none; }
 .bt-ouvir { position: relative; width: 44%; aspect-ratio: 1; border-radius: 50%; border: 0; cursor: pointer;
-  background: radial-gradient(circle at 35% 30%, var(--pri), var(--pri2)); color: var(--sobre-pri);
+  background: var(--pri); color: var(--sobre-pri); --ave: #0D0D0F; --topete: #F2EDE4;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 10px color-mix(in srgb, var(--pri) 18%, transparent), 0 18px 40px var(--sombra);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--pri) 22%, transparent), 0 0 0 16px color-mix(in srgb, var(--pri) 9%, transparent),
+    0 18px 40px var(--sombra);
   transition: transform .35s cubic-bezier(.3,.7,.2,1); -webkit-tap-highlight-color: transparent; }
 .bt-ouvir:hover { transform: scale(1.04); }
 .bt-ouvir:disabled { cursor: wait; filter: saturate(.4); opacity: .75; }
-.bt-ouvir .ic-marca { width: 52%; height: 52%; }
+.bt-ouvir .ic-marca { width: 64%; height: 64%; }
 .bt-ouvir .ic-parar { display: none; width: 28%; height: 28%; border-radius: 6px; background: currentColor; }
 .bt-ouvir.parar .ic-marca { display: none; }
 .bt-ouvir.parar .ic-parar { display: block; }
 .orbe.ouvindo .bt-ouvir { animation: pulsa 1.1s ease-in-out infinite; }
 @keyframes pulsa { 50% { transform: scale(.94); } }
-.anel-o { position: absolute; left: 28%; top: 28%; width: 44%; height: 44%; border-radius: 50%; border: 1.5px solid var(--vivo);
+.anel-o { position: absolute; left: 28%; top: 28%; width: 44%; height: 44%; border-radius: 50%; border: 2px solid var(--pri);
   opacity: 0; pointer-events: none; }
 .orbe.ouvindo .anel-o { animation: onda 2.2s ease-out infinite; }
 .orbe.ouvindo .anel-o:nth-of-type(2) { animation-delay: .73s; }
@@ -98,7 +108,7 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 .lista { list-style: none; margin: 0; padding: 0; }
 .lista li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--borda); }
 .lista li:first-child { border-top: 0; }
-.lista li:first-child:not(.vazio) .nome { font: 800 1.3rem var(--f-titulo); }
+.lista li:first-child:not(.vazio) .nome { font: 400 1.5rem var(--f-titulo); }
 .lista li:first-child:not(.vazio) .escore { color: var(--vivo); }
 .lista .vazio { display: block; color: var(--suave); }
 .lista .nome { font-weight: 700; }
@@ -107,8 +117,8 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 .lista .barra { grid-column: 1 / -1; height: 6px; background: var(--borda); border-radius: 3px; overflow: hidden; }
 .lista .barra b { display: block; height: 100%; background: linear-gradient(90deg, var(--p1), var(--p2)); border-radius: 3px; }
 .lista .detalhe { grid-column: 1 / -1; font-size: .78rem; color: var(--suave); }
-.lista .ativa .nome::after { content: "ouvindo agora"; margin-left: 8px; font: 600 .68rem var(--f-texto); color: var(--fundo);
-  background: var(--vivo); padding: 1px 7px; border-radius: 99px; vertical-align: middle; }
+.lista .ativa .nome::after { content: "ouvindo agora"; margin-left: 8px; font: 600 .68rem var(--f-texto); color: var(--sobre-pri);
+  background: var(--pri); padding: 1px 7px; border-radius: 99px; vertical-align: middle; }
 .lista .fora .detalhe { color: var(--iris); }
 
 .linha { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
@@ -122,6 +132,7 @@ summary { cursor: pointer; font-weight: 600; min-height: 32px; }
 .abas button { flex: 1; min-height: 52px; border: 0; background: none; cursor: pointer; color: var(--suave);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .74rem; font-weight: 600; }
 .abas button svg { width: 22px; height: 22px; }
+.abas { border-top-color: color-mix(in srgb, var(--mata) 70%, var(--borda)); }
 .abas button[aria-selected="true"] { color: var(--texto); }
 .abas button[aria-selected="true"] svg { color: var(--vivo); }
 .salvo { margin: 8px 0 0; font-size: .9rem; }
@@ -155,7 +166,7 @@ table.metricas { margin: 8px 0; }
 
 /* ficha de campo */
 .ficha { border-top: 1px solid var(--borda); margin-top: 12px; padding-top: 10px; display: grid; gap: 8px; }
-.ficha h3 { font-family: var(--f-titulo); margin: 0; font-size: 1rem; }
+.ficha h3 { font-family: var(--f-titulo); font-weight: 400; margin: 0; font-size: 1.1rem; }
 .ficha label { display: flex; flex-direction: column; font-size: .85rem; gap: 3px; flex: 1; min-width: 140px; }
 .ficha input, .ficha textarea, .ficha select { padding: 8px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); min-height: 40px; }
 .ficha .linha { margin-top: 0; }
