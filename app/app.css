@@ -207,3 +207,19 @@ table.metricas { margin: 8px 0; }
 /* impressão digital: link para outra sessão dentro de um texto */
 .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 #btn-repetidas { margin-bottom: 8px; }
+
+/* modo bolso: tela ligada mas preta (OLED), toques travados; sai segurando 2 s */
+.bolso { position: fixed; inset: 0; z-index: 50; background: #000; color: #3a3f47; touch-action: none; user-select: none;
+  -webkit-user-select: none; -webkit-touch-callout: none; display: flex; align-items: center; justify-content: center; cursor: none; }
+.bolso[hidden] { display: none; }
+.bolso-in { display: flex; flex-direction: column; align-items: center; gap: 6px; font: .85rem var(--f-mono); text-align: center;
+  transition: transform 2s ease; padding: 0 24px; }
+.bolso-mudo { color: #7a2a20; font-weight: 600; }
+.bolso-mudo[hidden] { display: none; }
+.bolso-dica { font-size: .72rem; color: #24282e; }
+.bolso-barra { width: 140px; height: 3px; border-radius: 3px; background: #111; overflow: hidden; }
+.bolso-barra i { display: block; height: 100%; width: 0; background: #3a3f47; }
+.bolso.segurando .bolso-barra i { width: 100%; transition: width 2s linear; }
+.outros-grupos { display: flex !important; flex-direction: column; gap: 3px; font-size: .82rem; color: var(--suave); }
+.outros-grupos .rot { font: .7rem var(--f-mono); text-transform: uppercase; letter-spacing: .06em; }
+.outros-grupos b { font-weight: 600; color: var(--texto); }

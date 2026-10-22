@@ -21,7 +21,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.6";
+const VERSAO_APP = "0.6.7";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -144,13 +144,29 @@ function metadadosBase() {
 }
 
 // ---------- SOM: lista ao vivo ----------
+// A lista principal mostra só aves; o modelo também tem insetos, anfíbios e mamíferos (cigarra e grilo entram fácil),
+// que ficam numa linha à parte. A sessão salva continua com todas as classes.
+const ehAve = (r) => estado.motor.rotulos[r.indice].classe === "Aves";
+const aves = (itens) => itens.filter(ehAve);
+const CLASSES_PT = { Insecta: "Insetos", Amphibia: "Anfíbios", Mammalia: "Mamíferos" };
+
+function linhaOutros(outros) {
+  if (!outros.length) return "";
+  const por = {};
+  for (const r of outros) (por[estado.motor.rotulos[r.indice].classe] ||= []).push(r);
+  return `<li class="outros-grupos"><span class="rot">Também ouvido (não é ave)</span>` +
+    Object.entries(por).map(([classe, rs]) => `<span><b>${esc(CLASSES_PT[classe] || classe)}:</b> ` +
+      rs.map((r) => `<span data-especie="${esc(estado.motor.rotulos[r.indice].especie)}">${esc(nomePt(estado.motor.rotulos[r.indice].especie))}</span> ${f2(r.melhorFinal)}`).join(", ") +
+      `</span>`).join("") + `</li>`;
+}
+
 function desenharLista(tempoS) {
-  const itens = estado.acum.lista(tempoS);
+  const todos = estado.acum.lista(tempoS), itens = aves(todos), outros = todos.filter((r) => !ehAve(r));
   const ol = $("lista");
   if (estado.rodando) $("palpite").textContent = itens.length
     ? `agora: ${nomePt(estado.motor.rotulos[itens[0].indice].especie)} · ${f2(itens[0].melhorFinal)}` : "";
   if (!itens.length) {
-    ol.innerHTML = `<li class="vazio">${estado.rodando ? "Ouvindo… nenhuma espécie acima do limiar ainda." : "Nenhuma espécie acima do limiar nesta gravação."}</li>`;
+    ol.innerHTML = `<li class="vazio">${estado.rodando ? "Ouvindo… nenhuma ave acima do limiar ainda." : "Nenhuma ave acima do limiar nesta gravação."}</li>` + linhaOutros(outros);
     return;
   }
   ol.innerHTML = itens.map((r) => {
@@ -163,7 +179,7 @@ function desenharLista(tempoS) {
       <span class="cient">${esc(rot.especie)}</span>
       <span class="barra"><b style="width:${Math.round(r.melhorFinal * 100)}%"></b></span>
       <span class="detalhe">${detalhe}</span></li>`;
-  }).join("");
+  }).join("") + linhaOutros(outros);
 }
 
 function desenharEstado() {
@@ -255,10 +271,59 @@ function textoMudo(si) {
 function avisarMudo(segundos) {
   const el = $("aviso-mudo"), mudo = estado.fonte === "microfone" && segundos >= MUDO_MIN_S;
   if (mudo) $("aviso-mudo-s").textContent = Math.floor(segundos);
+  $("bolso-mudo").hidden = !mudo;
   if (el.hidden === !mudo) return;
   el.hidden = !mudo;
   if (mudo) navigator.vibrate?.(200);
 }
+
+// ---------- modo bolso ----------
+// Na 1ª saída, a tela apagou (botão lateral ou bolso) e o Android silenciou o microfone. Uma página não pode gravar com
+// a tela apagada; o modo bolso deixa a tela ligada mas preta (em OLED, pixel preto fica desligado), sem brilho de texto
+// e com toques travados. Volta segurando o dedo 2 s. Só existe durante a escuta pelo microfone.
+const SEGURAR_MS = 2000;
+let bolsoRelogio = null, bolsoSegura = null;
+
+function marcarTela(evento) {
+  estado.mudo?.tela.push({ tS: +(estado.anel.total / SR).toFixed(1), quando: new Date().toISOString(), tela: evento });
+}
+
+function entrarBolso() {
+  if (!estado.rodando || estado.fonte !== "microfone") return;
+  $("bolso").hidden = false;
+  document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+  marcarTela("bolso");
+  let n = 0;
+  const tick = () => {
+    $("bolso-tempo").textContent = mmss(estado.anel.total / SR);
+    if (n++ % 30 === 0) $("bolso-in").style.transform = `translateY(${Math.round(Math.random() * 40 - 20)}vh)`;   // muda de lugar: não marca a tela
+  };
+  tick();
+  bolsoRelogio = setInterval(tick, 1000);
+}
+
+function sairBolso() {
+  if ($("bolso").hidden) return;
+  $("bolso").hidden = true;
+  clearInterval(bolsoRelogio);
+  soltarBolso();
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  if (estado.rodando) marcarTela("saiu do bolso");
+}
+
+function soltarBolso() {
+  clearTimeout(bolsoSegura);
+  $("bolso").classList.remove("segurando");
+}
+
+$("btn-bolso").onclick = entrarBolso;
+$("bolso").addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  $("bolso").classList.add("segurando");
+  bolsoSegura = setTimeout(() => { navigator.vibrate?.(60); sairBolso(); }, SEGURAR_MS);
+});
+for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("bolso").addEventListener(ev, soltarBolso);
+$("bolso").addEventListener("contextmenu", (e) => e.preventDefault());
 
 // blocos parados (página congelada): o vigia avisa quando a tela volta
 setInterval(() => {
@@ -307,6 +372,7 @@ async function iniciar(fonte, bytes, nomeArquivo) {
     espectro.ligar(estado.captura.analisador);
     figura.ligar(estado.captura.analisador);
     botaoGravar(fonte === "microfone" ? "Ouvindo…" : "Tocando arquivo…", true);
+    $("btn-bolso").hidden = fonte !== "microfone";
     $("palpite").textContent = "";
     desenharLista(0);
     desenharEstado();
@@ -325,7 +391,9 @@ async function parar() {
   await estado.analiseAtual;   // a última janela entra na sessão salva
   figura.desligar();
   $("aviso-mudo").hidden = true;
-  const melhor = estado.acum.lista(estado.anel.total / SR)[0];
+  $("btn-bolso").hidden = true;
+  sairBolso();
+  const melhor = aves(estado.acum.lista(estado.anel.total / SR))[0];
   botaoGravar(melhor ? nomePt(estado.motor.rotulos[melhor.indice].especie) : "Nada acima do limiar");
   $("palpite").textContent = melhor ? `mais provável · final ${f2(melhor.melhorFinal)} · toque para ouvir de novo` : "toque para ouvir de novo";
   desenharLista(estado.anel.total / SR);
@@ -482,7 +550,7 @@ async function desenharHistorico() {
   $("espaco").textContent = `${sessoes.length} sessão(ões)` +
     (e ? ` · ${(e.usage / 1e6).toFixed(0)} MB usados de ${(e.quota / 1e6).toFixed(0)} MB disponíveis (inclui ~95 MB do modelo)` : "");
   $("historico").innerHTML = sessoes.length ? sessoes.map((s) => {
-    const t = s.especies[0];
+    const t = s.especies.find((e) => e.classe === "Aves") || s.especies[0];   // título da sessão: a ave mais provável
     return `<li><button class="item${s.assinatura ? " com-figura" : ""}" data-id="${s.id}">
       ${s.assinatura ? `<canvas class="mini" aria-hidden="true"></canvas>` : ""}
       <span class="quando">${dataHora(s.inicio)} · ${s.tipo === "gravacao" ? "gravação" : s.tipo === "importado" ? "importado" : "arquivo tocado"} · ${Math.round(s.duracaoS)} s</span>

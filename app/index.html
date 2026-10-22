@@ -52,6 +52,7 @@
       <p class="estado mono" id="estado">—</p>
       <p class="salvo" id="salvo" hidden></p>
       <div class="controles centro">
+        <button class="btn primario" id="btn-bolso" hidden>Modo bolso</button>
         <label class="btn" id="btn-arquivo">Tocar arquivo<input type="file" id="arquivo" accept="audio/*,video/*" hidden></label>
       </div>
       <button class="btn instalar" id="btn-instalar" hidden>Instalar app na tela inicial</button>
@@ -163,6 +164,15 @@
       <a href="creditos.html">Créditos e licenças</a> · contato: agrofort.projetos@gmail.com</p>
   </details>
 </main>
+
+<div class="bolso" id="bolso" role="dialog" aria-label="Modo bolso: segure o dedo na tela por 2 segundos para voltar" hidden>
+  <div class="bolso-in" id="bolso-in">
+    <p>Ouvindo · <span id="bolso-tempo">0:00</span></p>
+    <p class="bolso-mudo" id="bolso-mudo" hidden>microfone mudo</p>
+    <p class="bolso-dica">Segure o dedo na tela por 2 s para voltar</p>
+    <div class="bolso-barra"><i></i></div>
+  </div>
+</div>
 
 <div class="faixa-versao" id="faixa-versao" role="status" hidden>
   <span>Versão nova pronta. Entra quando você terminar.</span>
