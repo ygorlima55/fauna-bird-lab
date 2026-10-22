@@ -188,3 +188,10 @@ table.metricas { margin: 8px 0; }
 .dialogo::backdrop { background: rgba(0, 0, 0, .6); }
 .ficha .marca { flex-direction: row; align-items: flex-start; gap: 8px; font-size: .9rem; }
 .ficha .marca input { min-height: auto; margin-top: 3px; }
+
+/* faixa de versão nova (atualização automática) */
+.faixa-versao { position: fixed; left: 12px; right: 12px; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); z-index: 7;
+  display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  background: var(--cartao2); border: 1px solid var(--vivo); border-radius: var(--raio); padding: 10px 12px 10px 16px;
+  box-shadow: 0 12px 30px var(--sombra); font-size: .9rem; max-width: 560px; margin: 0 auto; }
+.faixa-versao[hidden] { display: none; }

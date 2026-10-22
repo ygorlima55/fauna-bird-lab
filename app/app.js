@@ -19,7 +19,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.1";
+const VERSAO_APP = "0.6.2";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -322,6 +322,7 @@ $("arquivo").onchange = async (e) => {
 async function importar(arquivos) {
   const linhas = [];
   const ctx = new AudioContext();
+  estado.ocupadoImportando = true;   // a atualização automática espera a importação acabar
   for (const [k, f] of arquivos.entries()) {
     const rotulo = `${k + 1}/${arquivos.length} · ${f.name}`;
     try {
@@ -360,6 +361,7 @@ async function importar(arquivos) {
     }
   }
   await ctx.close();
+  estado.ocupadoImportando = false;
   $("estado-importar").textContent = `${arquivos.length} arquivo(s) importado(s) e salvos no histórico.`;
   estado.relatorio = linhas;
   desenharRelatorio(linhas, "Esta importação");
@@ -830,16 +832,53 @@ async function iniciarApp() {
 // worker acrescenta; basta recarregar uma vez depois que ele assumir a página.
 async function garantirIsolamento() {
   if (!("serviceWorker" in navigator)) return false;
-  await navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch((e) => console.warn("service worker:", e));
-  if (self.crossOriginIsolated) return false;
+  // sem service worker (bloqueado, aba anônima, erro de rede) o app abre assim mesmo: sem offline e com 1 thread
+  const reg = await navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch((e) => { console.warn("service worker:", e); return null; });
+  if (!reg || self.crossOriginIsolated) return false;
   let jaTentou = false;
   try { jaTentou = sessionStorage.getItem("fbl-recarregou") === "1"; sessionStorage.setItem("fbl-recarregou", "1"); } catch {}
   if (jaTentou) return false;
   $("estado").textContent = "Preparando uso offline (1ª vez baixa ~95 MB)…";
-  await navigator.serviceWorker.ready;
+  // espera a instalação terminar (ou falhar: "redundant") em vez de navigator.serviceWorker.ready, que nunca volta se falhar
+  await new Promise((ok) => {
+    const w = reg.installing || reg.waiting;
+    if (reg.active || !w) return ok();
+    w.addEventListener("statechange", () => { if (w.state === "activated" || w.state === "redundant") ok(); });
+  });
+  if (!reg.active) { $("estado").textContent = "Não deu para preparar o uso offline; o app funciona com internet."; return false; }
   if (!navigator.serviceWorker.controller)
     await new Promise((ok) => { navigator.serviceWorker.addEventListener("controllerchange", ok, { once: true }); setTimeout(ok, 3000); });
   location.reload();
   return true;
 }
 garantirIsolamento().then((recarregando) => { if (!recarregando) iniciarApp(); });
+
+// ---------- atualização automática ----------
+// Quem abre pelo link público recebe a versão nova sem cabo: o app pergunta ao servidor se o sw.js mudou ao abrir,
+// ao voltar para a tela e a cada 30 min. O service worker novo baixa só o que mudou (o modelo fica) e assume;
+// aí a página recarrega sozinha, a não ser que esteja gravando ou importando, quando só mostra a faixa.
+const VERIFICAR_MIN = 30;
+const tinhaControlador = !!navigator.serviceWorker?.controller;   // 1ª instalação já recarrega em garantirIsolamento
+let atualizacaoPendente = false;
+
+async function procurarVersaoNova() {
+  if (!navigator.onLine) return;
+  try { await (await navigator.serviceWorker?.getRegistration("../"))?.update(); } catch {}
+}
+
+function aplicarVersaoNova() {
+  if (estado.rodando || estado.ocupadoImportando) { $("faixa-versao").hidden = false; return; }
+  location.reload();
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!tinhaControlador || atualizacaoPendente) return;
+    atualizacaoPendente = true;
+    aplicarVersaoNova();
+  });
+  addEventListener("load", () => setTimeout(procurarVersaoNova, 5000));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") procurarVersaoNova(); });
+  setInterval(procurarVersaoNova, VERIFICAR_MIN * 60 * 1000);
+  $("btn-atualizar").onclick = () => location.reload();
+}
