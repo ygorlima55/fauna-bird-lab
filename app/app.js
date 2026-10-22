@@ -19,7 +19,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.2";
+const VERSAO_APP = "0.6.3";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -835,9 +835,12 @@ async function garantirIsolamento() {
   // sem service worker (bloqueado, aba anônima, erro de rede) o app abre assim mesmo: sem offline e com 1 thread
   const reg = await navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch((e) => { console.warn("service worker:", e); return null; });
   if (!reg || self.crossOriginIsolated) return false;
-  let jaTentou = false;
-  try { jaTentou = sessionStorage.getItem("fbl-recarregou") === "1"; sessionStorage.setItem("fbl-recarregou", "1"); } catch {}
-  if (jaTentou) return false;
+  // até 2 recarregamentos por sessão: no 1º acesso a página pode recarregar antes de o service worker assumir
+  // (fica sem isolamento); o 2º só acontece quando ele já controla a página, e aí o isolamento pega
+  let tentativas = 0;
+  try { tentativas = Number(sessionStorage.getItem("fbl-recarregou")) || 0; } catch {}
+  if (tentativas >= 2 || (tentativas === 1 && !navigator.serviceWorker.controller)) return false;
+  try { sessionStorage.setItem("fbl-recarregou", String(tentativas + 1)); } catch {}
   $("estado").textContent = "Preparando uso offline (1ª vez baixa ~95 MB)…";
   // espera a instalação terminar (ou falhar: "redundant") em vez de navigator.serviceWorker.ready, que nunca volta se falhar
   await new Promise((ok) => {
