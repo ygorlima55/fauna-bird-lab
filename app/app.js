@@ -21,7 +21,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.8.0";
+const VERSAO_APP = "0.8.1";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -856,23 +856,46 @@ const comLimite = (url, opcoes, ms = 20000) => {
 
 const avisarGuardado = (url) => navigator.serviceWorker?.controller?.postMessage({ tipo: "ref-guardada", url });
 
+// Fotos primeiro: são pequenas e é o que a pessoa vê; os sons podem levar até 60 s cada. No 1º teste offline no
+// S24+ os sons foram guardados e as fotos não, e ninguém via isso na tela: a ficha agora mostra o que está guardado.
 async function guardarReferencias(ficha) {
+  const c = await caches.open(CACHE_REF), falhas = { fotos: 0, sons: 0 };
+  await mostrarOffline(ficha, c, navigator.onLine ? "guardando" : "", falhas);
   if (!navigator.onLine) return;
-  const c = await caches.open(CACHE_REF);
-  for (const s of ficha.sons.filter((x) => x.comparavel)) {
-    try {
-      if (await c.match(s.url)) continue;
-      const r = await comLimite(s.url, { mode: "cors", credentials: "omit" }, 60000);
-      if (r.ok) { await c.put(s.url, r); avisarGuardado(s.url); }
-    } catch (e) { console.warn("som de referência não guardado:", s.url, e.message); }
-  }
   for (const f of ficha.fotos) {
     try {
       if (await c.match(f.url)) continue;
       await c.put(f.url, await comLimite(f.url, { mode: "no-cors", credentials: "omit" }));   // opaca: só para exibir
       avisarGuardado(f.url);
-    } catch (e) { console.warn("foto não guardada:", f.url, e.message); }
+    } catch (e) { falhas.fotos++; console.warn("foto não guardada:", f.url, e.message); }
+    await mostrarOffline(ficha, c, "guardando", falhas);
   }
+  for (const s of ficha.sons.filter((x) => x.comparavel)) {
+    try {
+      if (await c.match(s.url)) continue;
+      const r = await comLimite(s.url, { mode: "cors", credentials: "omit" }, 60000);
+      if (r.ok) { await c.put(s.url, r); avisarGuardado(s.url); } else falhas.sons++;
+    } catch (e) { falhas.sons++; console.warn("som de referência não guardado:", s.url, e.message); }
+    await mostrarOffline(ficha, c, "guardando", falhas);
+  }
+  await mostrarOffline(ficha, c, "fim", falhas);
+}
+
+// Linha da ficha: quanto dela abre sem internet. Só os sons do Commons são guardados (os outros só tocam com internet).
+async function mostrarOffline(ficha, c, fase, falhas) {
+  const el = $("offline-ficha");
+  if (!el || $("ficha-especie").dataset.fichaDe !== ficha.especie) return;
+  let fotos = 0, sons = 0;
+  const comparaveis = ficha.sons.filter((x) => x.comparavel);
+  for (const f of ficha.fotos) if (await c.match(f.url)) fotos++;
+  for (const s of comparaveis) if (await c.match(s.url)) sons++;
+  const tudo = fotos === ficha.fotos.length && sons === comparaveis.length;
+  const conta = `${fotos} de ${ficha.fotos.length} fotos e ${sons} de ${comparaveis.length} sons guardados`;
+  const falhou = falhas.fotos + falhas.sons;
+  el.className = "offline-ficha " + (tudo ? "ok" : fase === "fim" || !navigator.onLine ? "falta" : "");
+  el.textContent = tudo ? `Pronta para usar sem internet: ${conta}.`
+    : fase === "guardando" ? `Guardando para usar sem internet… ${conta}.`
+    : `Sem internet esta ficha mostra ${conta}.` + (falhou ? ` ${falhou} não puderam ser baixados agora (a fonte não respondeu); abra a ficha de novo com internet.` : "");
 }
 
 async function audioReferencia(url) {
@@ -911,7 +934,7 @@ async function abrirEspecie(especie, sessaoId = null) {
   } else if (!ficha) {
     caixa.querySelector(".estado-ficha").textContent = "Sem internet e sem ficha guardada desta espécie. Abra com sinal uma vez para guardar.";
   }
-  if (ficha) guardarReferencias(ficha);   // completa o que faltar no cache offline (só com internet)
+  if (ficha) guardarReferencias(ficha);   // completa o que faltar no cache offline (só com internet) e mostra o que já está guardado
 }
 
 function desenharFicha(f, sessaoId, carregando) {
@@ -923,6 +946,7 @@ function desenharFicha(f, sessaoId, carregando) {
     <h2>${esc(pt)}</h2>
     <p class="suave"><i>${esc(f.especie)}</i>${rot.classe ? ` · ${esc(rot.classe)}` : ""}${rot.ordem ? ` · ${esc(rot.ordem)}` : ""}${f.inat?.observacoes ? ` · ${f.inat.observacoes.toLocaleString("pt-BR")} observações no iNaturalist` : ""}</p>
     <p class="estado-ficha suave">${carregando ? (navigator.onLine ? "Buscando fotos e sons em fontes abertas…" : "") : f.consultadoEm ? `Fontes consultadas em ${dataHora(f.consultadoEm)}${f.erros?.length ? " · " + esc(f.erros.join("; ")) : ""}` : ""}</p>
+    <p class="offline-ficha" id="offline-ficha"></p>
     ${f.fotos.length ? `<div class="fotos">${f.fotos.map((x) => `<figure><img src="${esc(x.url)}" alt="${esc(pt)}" loading="lazy" onerror="this.closest('figure').hidden = true"><figcaption>${esc(x.credito)} ${selo(x.licenca)} · ${link(x.pagina, x.fonte)}</figcaption></figure>`).join("")}</div>` : ""}
     ${f.resumo ? `<p>${esc(f.resumo.texto.slice(0, 600))}${f.resumo.texto.length > 600 ? "…" : ""}</p><p class="credito">Texto: ${link(f.resumo.pagina, esc(f.resumo.fonte))} ${selo(f.resumo.licenca)}</p>` : ""}
     ${f.sons.length ? `<h3>Sons de referência</h3>

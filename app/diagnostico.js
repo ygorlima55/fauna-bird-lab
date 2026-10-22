@@ -141,6 +141,29 @@ async function parte1() {
     const t = `caches: ${nomes.join(", ") || "nenhum"} · guardado ${MB(total)}`;
     return faltam.length ? { aviso: `${t} · faltam: ${faltam.join(", ")}` } : t;
   }, { limiteMs: 60000 });
+  // Na ficha de espécie as fotos vêm de fora (iNaturalist, Wikimedia). No 1º teste no S24+ o app do cabo não conseguia
+  // buscar nenhuma: as fotos nunca eram guardadas e sumiam offline. Esta etapa pega isso antes do campo.
+  await etapa("Buscar foto de exemplo de fora (fichas de espécies)", async () => {
+    if (!navigator.onLine) return { aviso: "sem internet agora: não dá para testar" };
+    const fontes = [["Wikimedia", "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Wikipedia-logo-v2.svg/120px-Wikipedia-logo-v2.svg.png"],
+                    ["iNaturalist", "https://inaturalist-open-data.s3.amazonaws.com/photos/1766279/square.jpg"]];
+    const res = [];
+    for (const [nome, url] of fontes) {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000), t0 = performance.now();
+      try {
+        const r = await fetch(url, { mode: "no-cors", credentials: "omit", signal: ctl.signal });
+        const c = await caches.open("fbl-diagnostico-teste");
+        await c.put(url, r);   // o mesmo caminho do app: buscar e guardar
+        await caches.delete("fbl-diagnostico-teste");
+        res.push({ nome, ok: true, txt: `${nome} ok em ${Math.round(performance.now() - t0)} ms` });
+      } catch (e) {
+        res.push({ nome, ok: false, txt: `${nome} falhou: ${e.name === "AbortError" ? "sem resposta em 15 s" : e.message}` });
+      } finally { clearTimeout(t); }
+    }
+    const txt = res.map((r) => r.txt).join(" · ");
+    if (res.every((r) => !r.ok)) throw new Error(`${txt}: as fotos das fichas não vão ser guardadas para usar offline`);
+    return res.some((r) => !r.ok) ? { aviso: txt } : `${txt} · busca e guarda`;
+  }, { limiteMs: 40000 });
   await etapa("Microfone e áudio", () => {
     const tem = [!!navigator.mediaDevices?.getUserMedia && "microfone", !!window.AudioWorkletNode && "AudioWorklet",
       !!window.OfflineAudioContext && "reamostragem", "wakeLock" in navigator && "tela ligada"].filter(Boolean);
