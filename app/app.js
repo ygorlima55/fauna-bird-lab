@@ -21,7 +21,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.7";
+const VERSAO_APP = "0.6.8";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -638,7 +638,7 @@ function textoRepetida(r, outra) {
   const d = r.deslocamentoS;
   const onde = Math.abs(d) < 0.5 ? "do começo" : d > 0 ? `esta começa no segundo ${d.toFixed(1)} dela` : `ela começa no segundo ${(-d).toFixed(1)} desta`;
   return `Mesma gravação que a sessão de <button class="link" data-abrir-sessao="${esc(r.id)}">${quando}</button> · ${onde} · ` +
-    `${r.codigos} códigos iguais (${Math.round(r.fracao * 100)}%)`;
+    `${r.codigos} códigos no mesmo ponto (${Math.round(r.destaque)}× acima do acaso)`;
 }
 
 async function mostrarRepetidas(s) {

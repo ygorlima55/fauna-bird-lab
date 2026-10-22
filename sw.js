@@ -1,7 +1,7 @@
 // Service worker do Fauna Bird Lab · mude VERSAO a cada publicação para atualizar os aparelhos.
 // Fica na raiz do projeto para controlar a tela (app/), o motor (core/, inclusive o worker),
 // o ONNX Runtime (vendor/) e os modelos (modelos/). Os testes (testes/) ficam fora do cache.
-const VERSAO = "0.6.7";
+const VERSAO = "0.6.8";
 const CACHE_APP = "fbl-app-" + VERSAO;
 const CACHE_MODELOS = "fbl-modelos-birdnet-plus-v3.0-preview3.1";   // ~95 MB: só muda com modelo novo
 const CACHE_REF = "fbl-referencias";                                 // fotos e sons da ficha de espécie (app.js)

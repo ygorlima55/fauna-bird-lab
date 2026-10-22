@@ -111,9 +111,13 @@ export function indice(impressoes) {
 }
 
 // Procura a consulta no índice. Para cada gravação, conta os códigos que concordam no mesmo deslocamento
-// (com tolerância de ±1 quadro). Devolve as que passam dos mínimos, da mais forte para a mais fraca.
+// (com tolerância de ±1 quadro). É a mesma gravação quando o melhor deslocamento tem pelo menos minCodigos votos
+// E se destaca do acaso: minDestaque vezes a média de votos por deslocamento. Por acaso, os votos se espalham
+// (~1 por deslocamento). Não depende da duração (um canto de 30 s dentro de 60 s de gravação passa) nem de o canto
+// se repetir (frases repetidas dividem os votos entre vários deslocamentos, mas cada um ainda se destaca).
+// Medido em 30 pares de espécies diferentes: destaque máximo 3,9×; regravação pelo ar no celular ≈ 80×.
 // deslocamentoS > 0: a consulta começa nesse segundo da gravação encontrada.
-export function procurar(consulta, mapa, { ignorar = null, minCodigos = 20, minFracao = 0.03 } = {}) {
+export function procurar(consulta, mapa, { ignorar = null, minCodigos = 20, minDestaque = 20, minFracao = 0 } = {}) {
   const votos = new Map();   // id → Map(deslocamento → votos)
   for (let k = 0; k < consulta.codigos.length; k++) {
     const lista = mapa.get(consulta.codigos[k]);
@@ -129,14 +133,16 @@ export function procurar(consulta, mapa, { ignorar = null, minCodigos = 20, minF
   }
   const s = segundosPorQuadro(consulta.sr), saida = [];
   for (const [id, porId] of votos) {
-    let melhor = 0, desl = 0;
+    let melhor = 0, desl = 0, total = 0;
+    for (const v of porId.values()) total += v;
     for (const [d, v] of porId) {
       const soma = v + (porId.get(d - 1) || 0) + (porId.get(d + 1) || 0);
       if (soma > melhor) { melhor = soma; desl = d; }
     }
     const fracao = consulta.codigos.length ? melhor / consulta.codigos.length : 0;
-    if (melhor >= minCodigos && fracao >= minFracao)
-      saida.push({ id, codigos: melhor, fracao: +fracao.toFixed(3), deslocamentoS: +(desl * s).toFixed(2) });
+    const destaque = total ? melhor / (total / porId.size) : 0;   // vezes acima da média de votos por deslocamento
+    if (melhor >= minCodigos && destaque >= minDestaque && fracao >= minFracao)
+      saida.push({ id, codigos: melhor, fracao: +fracao.toFixed(3), destaque: +destaque.toFixed(1), deslocamentoS: +(desl * s).toFixed(2) });
   }
   return saida.sort((a, b) => b.codigos - a.codigos);
 }
