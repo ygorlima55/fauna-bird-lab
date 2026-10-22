@@ -203,3 +203,7 @@ table.metricas { margin: 8px 0; }
 .aviso-mudo b { color: var(--iris); font-size: 1rem; font-variant-numeric: tabular-nums; }
 .aviso-mudo[hidden] { display: none; }
 @keyframes pisca-mudo { 50% { border-color: transparent; } }
+
+/* impressão digital: link para outra sessão dentro de um texto */
+.link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+#btn-repetidas { margin-bottom: 8px; }

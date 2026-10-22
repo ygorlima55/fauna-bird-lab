@@ -2,9 +2,10 @@
 //   sessoes  — metadados pequenos (lista do histórico, fila de sincronização)
 //   arquivos — áudio WAV e imagem do sonograma de cada sessão (só carregados ao abrir o detalhe)
 //   fichas   — ficha de espécie de fontes abertas (iNaturalist/Commons), com embeddings das referências (v2)
+//   impressoes — impressão digital de cada sessão (códigos e tempos), para achar gravações repetidas (v3)
 // Cada sessão tem UUID, horário, GPS e SHA-256 do áudio: é o que a sincronização (Parte 20) usa
 // para não duplicar nem perder gravações.
-const NOME = "fauna-bird-lab", VERSAO = 2;
+const NOME = "fauna-bird-lab", VERSAO = 3;
 
 let conexao;
 function abrir() {
@@ -19,6 +20,7 @@ function abrir() {
       }
       if (!db.objectStoreNames.contains("arquivos")) db.createObjectStore("arquivos", { keyPath: "id" });
       if (!db.objectStoreNames.contains("fichas")) db.createObjectStore("fichas", { keyPath: "especie" });
+      if (!db.objectStoreNames.contains("impressoes")) db.createObjectStore("impressoes", { keyPath: "id" });
     };
     // outra janela do app aberta com versão velha segura o banco: ela fecha a conexão e recarrega
     r.onsuccess = () => { r.result.onversionchange = () => { r.result.close(); location.reload(); }; ok(r.result); };
@@ -58,11 +60,19 @@ export const lerSessao = (id) => transacao(["sessoes"], "readonly", (tx) => pedi
 export const lerArquivos = (id) => transacao(["arquivos"], "readonly", (tx) => pedido(tx.objectStore("arquivos").get(id)));
 
 export async function apagarSessao(id) {
-  await transacao(["sessoes", "arquivos"], "readwrite", (tx) => {
+  await transacao(["sessoes", "arquivos", "impressoes"], "readwrite", (tx) => {
     tx.objectStore("sessoes").delete(id);
     tx.objectStore("arquivos").delete(id);
+    tx.objectStore("impressoes").delete(id);
   });
 }
+
+// impressão digital: {id (= id da sessão), versao, sr, passo, codigos: Uint32Array, tempos: Uint32Array}
+export async function salvarImpressao(imp) {
+  await transacao(["impressoes"], "readwrite", (tx) => { tx.objectStore("impressoes").put(imp); });
+}
+export const lerImpressao = (id) => transacao(["impressoes"], "readonly", (tx) => pedido(tx.objectStore("impressoes").get(id)));
+export const listarImpressoes = () => transacao(["impressoes"], "readonly", (tx) => pedido(tx.objectStore("impressoes").getAll()));
 
 // Pede ao navegador para não apagar os dados quando faltar espaço (se ele permitir).
 export async function pedirPersistencia() {

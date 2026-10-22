@@ -12,7 +12,8 @@ export function localParaEnvio(local, exato) {
   return { lat: r(local.lat), lon: r(local.lon), fonte: local.fonte, precisaoEnvio: "aproximada (~1 km)" };
 }
 
-export function pacoteDados(sessao, { autorizado, localExato, credito, contato, observacao, app }) {
+// impressao: {versao, sr, passo, codigos, dados (base64)} — permite achar a mesma gravação enviada por pessoas diferentes
+export function pacoteDados(sessao, { autorizado, localExato, credito, contato, observacao, app, impressao = null }) {
   if (!autorizado) throw new Error("sem autorização: nada é montado");
   const { janelas, ...resto } = sessao;
   return {
@@ -25,6 +26,7 @@ export function pacoteDados(sessao, { autorizado, localExato, credito, contato, 
     observacaoDoEnvio: (observacao || "").trim() || null,
     sessao: { ...resto, local: localParaEnvio(sessao.local, localExato), janelas: janelas?.length ?? 0 },
     janelas: janelas || [],
+    impressao,
   };
 }
 

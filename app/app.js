@@ -10,7 +10,9 @@ import { Espectrograma } from "../core/espectrograma.js";
 import { SR, JANELA_S, PASSO_S, ALFA, semanaBirdnet, reordenar, top } from "../core/ranking.js";
 import { juntar, paraWav16, sha256, snrAproximado, uuid } from "../core/audio.js";
 import { sonogramaPng } from "../core/sonograma.js";
-import { salvarSessao, atualizarSessao, listarSessoes, lerSessao, lerArquivos, apagarSessao, pedirPersistencia, espaco, lerFicha, salvarFicha } from "../core/banco.js";
+import { salvarSessao, atualizarSessao, listarSessoes, lerSessao, lerArquivos, apagarSessao, pedirPersistencia, espaco, lerFicha, salvarFicha,
+         salvarImpressao, lerImpressao, listarImpressoes } from "../core/banco.js";
+import { impressao, indice, procurar, paraBase64 } from "../core/impressao.js";
 import { fichaAberta, VERSAO_FICHA } from "../core/fontes.js";
 import { embeddingDaEspecie, ordenarPorSemelhanca } from "../core/similaridade.js";
 import { NIVEIS, METODOS, DISTANCIAS, RUIDOS, lerListaMerlin, resolverNome, planilhaCsv } from "../core/campo.js";
@@ -19,7 +21,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.5";
+const VERSAO_APP = "0.6.6";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -355,8 +357,10 @@ async function salvarAoVivo() {
       silencio: resumoMudo(estado.mudo, tempoS),
     };
     await salvarSessao(sessao, { audio: wav, sonograma: await sonogramaPng(pcm, SR) });
+    const repetidas = await registrarImpressao(sessao, pcm);
     $("salvo").innerHTML = `Sessão salva no aparelho (${especies.length} espécie(s), ${tempoS.toFixed(0)} s). <a href="#" id="ver-salvo">Ver no histórico</a>` +
-      (sessao.silencio.totalS ? `<br><span class="falha">Microfone mudo em ${textoMudo(sessao.silencio)}.</span>` : "");
+      (sessao.silencio.totalS ? `<br><span class="falha">Microfone mudo em ${textoMudo(sessao.silencio)}.</span>` : "") +
+      (repetidas.length ? `<br><span class="falha">Esta gravação é igual a ${repetidas.length} sessão(ões) já salvas (ver no histórico).</span>` : "");
     $("ver-salvo").onclick = (e) => { e.preventDefault(); abrirAba("historico"); abrirDetalhe(sessao.id); };
     estado.ultimaSessao = sessao.id;
     $("lista").dataset.sessao = sessao.id;   // tocar numa espécie da lista abre a ficha já com "comparar"
@@ -387,6 +391,7 @@ $("arquivo").onchange = async (e) => {
 // ---------- IMPORTAR ----------
 async function importar(arquivos) {
   const linhas = [];
+  let nRepetidas = 0;
   const ctx = new AudioContext();
   estado.ocupadoImportando = true;   // a atualização automática espera a importação acabar
   for (const [k, f] of arquivos.entries()) {
@@ -411,7 +416,7 @@ async function importar(arquivos) {
       const especies = top(final, estado.motor.rotulos, 10).map((t) => ({
         especie: t.especie, nomePt: nomePt(t.especie), classe: t.classe, final: +t.escore.toFixed(4), som: +acustico[t.indice].toFixed(4),
         prior: estado.prior ? +estado.prior[t.indice].toFixed(4) : null }));
-      await salvarSessao({
+      const sessaoImp = {
         id: uuid(), tipo: "importado", inicio: new Date().toISOString(), fim: new Date().toISOString(),
         duracaoS: linha.duracaoS, origem: `importado (${buffer.sampleRate} Hz, ${buffer.numberOfChannels} canal(is))`,
         arquivoOriginal: f.name, bytesOriginal: f.size, sha256Original: shaOriginal,
@@ -421,14 +426,18 @@ async function importar(arquivos) {
         especies, janelas: r.topJanelas.map((j) => ({ inicioS: j.inicioS, top: j.indices.map((i, q) => [estado.motor.rotulos[i].especie, +j.escores[q].toFixed(4)]) })),
         nJanelas: r.janelas, msPorJanela: linha.msPorJanela, snrDb: linha.snrDb, relatorio: linha,
         sha256Audio: await sha256(wav), bytesAudio: wav.size,
-      }, { audio: wav, sonograma: await sonogramaPng(pcm, SR) });
+      };
+      await salvarSessao(sessaoImp, { audio: wav, sonograma: await sonogramaPng(pcm, SR) });
+      const repetidas = await registrarImpressao(sessaoImp, pcm);
+      if (repetidas.length) { linha.repetida = repetidas[0].id; nRepetidas++; }
     } catch (e) {
       linhas.push({ arquivo: f.name, erro: e.message });
     }
   }
   await ctx.close();
   estado.ocupadoImportando = false;
-  $("estado-importar").textContent = `${arquivos.length} arquivo(s) importado(s) e salvos no histórico.`;
+  $("estado-importar").textContent = `${arquivos.length} arquivo(s) importado(s) e salvos no histórico.` +
+    (nRepetidas ? ` ${nRepetidas} deles são gravações que já estavam no histórico (ver detalhe).` : "");
   estado.relatorio = linhas;
   desenharRelatorio(linhas, "Esta importação");
 }
@@ -478,7 +487,7 @@ async function desenharHistorico() {
       ${s.assinatura ? `<canvas class="mini" aria-hidden="true"></canvas>` : ""}
       <span class="quando">${dataHora(s.inicio)} · ${s.tipo === "gravacao" ? "gravação" : s.tipo === "importado" ? "importado" : "arquivo tocado"} · ${Math.round(s.duracaoS)} s</span>
       <span class="nome">${t ? esc(t.nomePt) + ` <span class="mono">${f2(t.final)}</span>` : "nenhuma espécie acima do limiar"}</span>
-      <span class="suave">${s.arquivoOriginal ? esc(s.arquivoOriginal) + " · " : ""}${s.local ? `${s.local.lat.toFixed(3)}, ${s.local.lon.toFixed(3)}` : "sem local"}${s.especies.length > 1 ? ` · +${s.especies.length - 1} espécie(s)` : ""}${s.silencio?.totalS ? ` · <span class="falha">mudo ${Math.round(s.silencio.pct)}%</span>` : ""}</span>
+      <span class="suave">${s.arquivoOriginal ? esc(s.arquivoOriginal) + " · " : ""}${s.local ? `${s.local.lat.toFixed(3)}, ${s.local.lon.toFixed(3)}` : "sem local"}${s.especies.length > 1 ? ` · +${s.especies.length - 1} espécie(s)` : ""}${s.silencio?.totalS ? ` · <span class="falha">mudo ${Math.round(s.silencio.pct)}%</span>` : ""}${s.repetidas?.length ? ` · <span class="falha">repetida</span>` : ""}</span>
     </button></li>`;
   }).join("") : `<li class="vazio">Nenhuma sessão salva ainda.</li>`;
   $("historico").querySelectorAll("button.item").forEach((b) => { b.onclick = () => abrirDetalhe(b.dataset.id); });
@@ -505,6 +514,7 @@ async function abrirDetalhe(id) {
         `<tr><td colspan="5">Nenhuma espécie acima do limiar.</td></tr>`}</table>
     ${s.silencio?.totalS ? `<p class="falha">Microfone mudo em ${textoMudo(s.silencio)}. Nesses trechos o app não recebeu som
       (outro app usando o microfone ou o Bird Lab fora da tela)${s.silencio.tela?.some((e) => e.tela === "saiu") ? `; o app saiu da tela ${s.silencio.tela.filter((e) => e.tela === "saiu").length} vez(es)` : ""}.</p>` : ""}
+    <p class="suave" id="d-repetidas">Procurando gravações repetidas…</p>
     <p class="suave mono">${esc(s.origem)} · ${s.nJanelas} janelas · ${s.msPorJanela ?? "—"} ms/janela · SNR ${s.snrDb ?? "—"} dB<br>
       local: ${s.local ? `${s.local.lat.toFixed(5)}, ${s.local.lon.toFixed(5)} (${esc(s.local.fonte)}${s.local.precisaoM ? `, ±${Math.round(s.local.precisaoM)} m` : ""})` : "sem local"} · semana ${s.semana}<br>
       id ${s.id}<br>SHA-256 ${s.sha256Audio}<br>${esc(s.modelo.nome)} · app ${esc(s.app)} · ${s.sincronizado ? "sincronizado" : "não sincronizado"}</p>
@@ -521,6 +531,7 @@ async function abrirDetalhe(id) {
   $("d-json").onclick = () => baixar(new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }), nome + ".json");
   $("d-fechar").onclick = () => { d.hidden = true; };
   $("d-pesquisa").onclick = () => abrirEnvioPesquisa(s, a);
+  mostrarRepetidas(s);
   if (s.assinatura) requestAnimationFrame(() => desenharMiniatura($("d-figura"), s.assinatura, { raio: 0.38, n: 6000 }));
   ligarFichaCampo(s);
   $("d-apagar").onclick = async () => {
@@ -531,6 +542,89 @@ async function abrirDetalhe(id) {
   };
   d.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+// ---------- IMPRESSÃO DIGITAL: gravações repetidas ----------
+// Cada sessão ganha uma impressão digital (core/impressao.js). Ela responde "este som já existe?": a mesma
+// gravação salva de novo, recortada, convertida ou regravada pelo microfone. Não identifica espécie.
+let indiceImp = null;   // índice de todas as impressões; refeito quando entra uma nova
+
+async function indiceDeImpressoes() {
+  if (!indiceImp) indiceImp = indice(await listarImpressoes());
+  return indiceImp;
+}
+
+// calcula, guarda e procura repetidas; grava o resumo na sessão
+async function registrarImpressao(sessao, pcm) {
+  const imp = { id: sessao.id, ...impressao(pcm, SR) };
+  await salvarImpressao(imp);
+  indiceImp = null;
+  const achadas = procurar(imp, await indiceDeImpressoes(), { ignorar: sessao.id });
+  sessao.impressao = { versao: imp.versao, codigos: imp.codigos.length };
+  sessao.repetidas = achadas.slice(0, 5);
+  await atualizarSessao(sessao);
+  return achadas;
+}
+
+function textoRepetida(r, outra) {
+  const quando = outra ? `${dataHora(outra.inicio)}${outra.arquivoOriginal ? ` (${esc(outra.arquivoOriginal)})` : ""}` : "sessão apagada";
+  const d = r.deslocamentoS;
+  const onde = Math.abs(d) < 0.5 ? "do começo" : d > 0 ? `esta começa no segundo ${d.toFixed(1)} dela` : `ela começa no segundo ${(-d).toFixed(1)} desta`;
+  return `Mesma gravação que a sessão de <button class="link" data-abrir-sessao="${esc(r.id)}">${quando}</button> · ${onde} · ` +
+    `${r.codigos} códigos iguais (${Math.round(r.fracao * 100)}%)`;
+}
+
+async function mostrarRepetidas(s) {
+  const caixa = $("d-repetidas");
+  if (!caixa) return;
+  const imp = await lerImpressao(s.id);
+  if (!imp) { caixa.innerHTML = "Impressão digital ainda não calculada. Use “Procurar gravações repetidas” no Histórico."; return; }
+  const achadas = procurar(imp, await indiceDeImpressoes(), { ignorar: s.id });
+  if (!achadas.length) { caixa.textContent = `Nenhuma gravação repetida (impressão digital: ${imp.codigos.length} códigos).`; return; }
+  const outras = await Promise.all(achadas.map((r) => lerSessao(r.id)));
+  caixa.innerHTML = `<span class="falha">Gravação repetida.</span><br>` + achadas.map((r, i) => textoRepetida(r, outras[i])).join("<br>");
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-abrir-sessao]");
+  if (b) { e.preventDefault(); abrirDetalhe(b.dataset.abrirSessao); }
+});
+
+// Histórico: calcula a impressão das sessões que ainda não têm e conta os pares repetidos
+$("btn-repetidas").onclick = async () => {
+  const st = (t) => { $("estado-repetidas").textContent = t; };
+  $("btn-repetidas").disabled = true;
+  try {
+    const sessoes = await listarSessoes();
+    const ja = new Set((await listarImpressoes()).map((i) => i.id));
+    const faltam = sessoes.filter((s) => !ja.has(s.id));
+    const ctx = new AudioContext();
+    for (const [k, s] of faltam.entries()) {
+      st(`Calculando impressão digital ${k + 1}/${faltam.length}…`);
+      const a = await lerArquivos(s.id);
+      if (!a?.audio) continue;
+      const pcm = await paraPcm32k(await ctx.decodeAudioData(await a.audio.arrayBuffer()));
+      const imp = { id: s.id, ...impressao(pcm, SR) };
+      await salvarImpressao(imp);
+      s.impressao = { versao: imp.versao, codigos: imp.codigos.length };
+      await atualizarSessao(s);
+    }
+    await ctx.close();
+    indiceImp = null;
+    const mapa = await indiceDeImpressoes(), pares = new Set();
+    for (const imp of await listarImpressoes()) {
+      const achadas = procurar(imp, mapa, { ignorar: imp.id });
+      for (const r of achadas) pares.add([imp.id, r.id].sort().join("|"));
+      const s = sessoes.find((x) => x.id === imp.id);
+      if (s && JSON.stringify(s.repetidas || []) !== JSON.stringify(achadas.slice(0, 5))) { s.repetidas = achadas.slice(0, 5); await atualizarSessao(s); }
+    }
+    st(`${sessoes.length} sessão(ões) verificadas · ${faltam.length} impressão(ões) calculada(s) agora · ${pares.size} par(es) de gravações repetidas.`);
+    desenharHistorico();
+  } catch (e) {
+    st("Erro: " + e.message);
+  } finally {
+    $("btn-repetidas").disabled = false;
+  }
+};
 
 // ---------- ENVIO VOLUNTÁRIO PARA A PESQUISA ----------
 function abrirEnvioPesquisa(s, arquivos) {
@@ -560,8 +654,10 @@ function abrirEnvioPesquisa(s, arquivos) {
     e.preventDefault();
     if (!f.autorizo.checked) return;
     try {
+      const imp = await lerImpressao(s.id);
       const dados = pacoteDados(s, { autorizado: true, localExato: f.exato.checked, credito: f.credito.value, contato: f.contato.value,
-                                     observacao: f.observacao.value, app: VERSAO_APP });
+                                     observacao: f.observacao.value, app: VERSAO_APP,
+                                     impressao: imp ? { versao: imp.versao, sr: imp.sr, passo: imp.passo, codigos: imp.codigos.length, dados: paraBase64(imp) } : null });
       const nomes = nomeArquivos(s);
       const arquivosEnvio = [new File([arquivos.audio], nomes.audio, { type: "audio/wav" }),
                              new File([JSON.stringify(dados, null, 2)], nomes.dados, { type: "application/json" })];

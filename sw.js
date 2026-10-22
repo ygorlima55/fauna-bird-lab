@@ -1,7 +1,7 @@
 // Service worker do Fauna Bird Lab · mude VERSAO a cada publicação para atualizar os aparelhos.
 // Fica na raiz do projeto para controlar a tela (app/), o motor (core/, inclusive o worker),
 // o ONNX Runtime (vendor/) e os modelos (modelos/). Os testes (testes/) ficam fora do cache.
-const VERSAO = "0.6.5";
+const VERSAO = "0.6.6";
 const CACHE_APP = "fbl-app-" + VERSAO;
 const CACHE_MODELOS = "fbl-modelos-birdnet-plus-v3.0-preview3.1";   // ~95 MB: só muda com modelo novo
 const CACHE_REF = "fbl-referencias";                                 // fotos e sons da ficha de espécie (app.js)
@@ -30,7 +30,7 @@ self.addEventListener("message", (e) => { if (e.data?.tipo === "ref-guardada") r
 const APP = [
   "app/", "app/index.html", "app/app.css", "app/app.js", "app/figura.js", "app/privacidade.html", "app/creditos.html", "app/manifest.webmanifest", "app/icone.svg", "app/icone-192.png", "app/icone-512.png", "app/icone-maskable-512.png",
   "core/inferencia.js", "core/inferencia.worker.js", "core/ranking.js", "core/captura.js", "core/acumulador.js", "core/espectrograma.js",
-  "core/banco.js", "core/audio.js", "core/sonograma.js", "core/relatorio.js", "core/desempenho.js", "core/campo.js", "core/fontes.js", "core/similaridade.js", "core/pesquisa.js",
+  "core/banco.js", "core/audio.js", "core/sonograma.js", "core/relatorio.js", "core/desempenho.js", "core/campo.js", "core/fontes.js", "core/similaridade.js", "core/pesquisa.js", "core/impressao.js",
 ];
 const M = "modelos/birdnet-plus-v3/", V = "vendor/onnxruntime-web-1.30.0/";
 const MODELOS = [
