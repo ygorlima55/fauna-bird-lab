@@ -21,7 +21,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.9";
+const VERSAO_APP = "0.7.0";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -1087,6 +1087,13 @@ async function garantirIsolamento() {
   return true;
 }
 garantirIsolamento().then((recarregando) => { if (!recarregando) iniciarApp(); });
+
+// Modelo que não termina de carregar (caso do iPhone 14 Pro Max, CASE_IOS_001): depois de 60 s, oferece o
+// diagnóstico, que mostra em que etapa o aparelho parou. Na 1ª vez o download de ~80 MB pode passar disso.
+setTimeout(() => {
+  if (!estado.motor?.rotulos && $("btn-gravar").disabled)
+    $("estado").innerHTML = `O modelo está demorando para carregar. Se continuar assim, <a href="diagnostico.html">abra o diagnóstico do aparelho</a> e mande o resultado.`;
+}, 60000);
 
 // ---------- atualização automática ----------
 // Quem abre pelo link público recebe a versão nova sem cabo: o app pergunta ao servidor se o sw.js mudou ao abrir,

@@ -1,7 +1,7 @@
 // Service worker do Fauna Bird Lab · mude VERSAO a cada publicação para atualizar os aparelhos.
 // Fica na raiz do projeto para controlar a tela (app/), o motor (core/, inclusive o worker),
 // o ONNX Runtime (vendor/) e os modelos (modelos/). Os testes (testes/) ficam fora do cache.
-const VERSAO = "0.6.9";
+const VERSAO = "0.7.0";
 const CACHE_APP = "fbl-app-" + VERSAO;
 const CACHE_MODELOS = "fbl-modelos-birdnet-plus-v3.0-preview3.1";   // ~95 MB: só muda com modelo novo
 const CACHE_REF = "fbl-referencias";                                 // fotos e sons da ficha de espécie (app.js)
@@ -28,7 +28,7 @@ carregarRef();
 self.addEventListener("message", (e) => { if (e.data?.tipo === "ref-guardada") refGuardadas.add(e.data.url); });
 
 const APP = [
-  "app/", "app/index.html", "app/app.css", "app/app.js", "app/figura.js", "app/privacidade.html", "app/creditos.html", "app/manifest.webmanifest", "app/icone.svg", "app/icone-192.png", "app/icone-512.png", "app/icone-maskable-512.png",
+  "app/", "app/index.html", "app/app.css", "app/app.js", "app/figura.js", "app/diagnostico.html", "app/diagnostico.js", "app/privacidade.html", "app/creditos.html", "app/manifest.webmanifest", "app/icone.svg", "app/icone-192.png", "app/icone-512.png", "app/icone-maskable-512.png",
   "core/inferencia.js", "core/inferencia.worker.js", "core/ranking.js", "core/captura.js", "core/acumulador.js", "core/espectrograma.js",
   "core/banco.js", "core/audio.js", "core/sonograma.js", "core/relatorio.js", "core/desempenho.js", "core/campo.js", "core/fontes.js", "core/similaridade.js", "core/pesquisa.js", "core/impressao.js",
 ];
@@ -65,11 +65,15 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   // fotos e sons de referência (outros sites) guardados pela ficha de espécie: do cache quando houver
   if (url.origin !== location.origin) {
-    if (refGuardadas.has(e.request.url))
+    // Fotos: sempre procura primeiro no cache, direto. Depender de refGuardadas falhava depois de reiniciar o
+    // celular: o SW acorda com o pedido da foto e a lista ainda está vazia (carregarRef é assíncrono), então
+    // a foto ia para a rede e, sem internet, sumia. Sem cópia guardada: no Chrome 155 do Android, <img> externo
+    // fica pendurado com COEP credentialless, mas fetch() funciona; o SW busca (sem credenciais, com tempo
+    // limite) e entrega a resposta ao <img>.
+    if (e.request.destination === "image")
+      e.respondWith(doCache(e.request, [CACHE_REF], { ignoreVary: true }).then((r) => r || buscarComLimite(e.request.url, 20000)));
+    else if (refGuardadas.has(e.request.url))
       e.respondWith(doCache(e.request, [CACHE_REF], { ignoreVary: true }).then((r) => r || fetch(e.request)));
-    // Fotos de outros sites: no Chrome 155 do Android, <img> externo fica pendurado com COEP credentialless,
-    // mas fetch() funciona. O SW busca (sem credenciais, com tempo limite) e entrega a resposta ao <img>.
-    else if (e.request.destination === "image") e.respondWith(buscarComLimite(e.request.url, 20000));
     return;
   }
   // testes sempre da rede (nem a página nem o que ela carrega)

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diagnóstico · Fauna Bird Lab</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  main { padding-top: 16px; }
+  .passos { list-style: none; margin: 0; padding: 0; }
+  .passos li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 4px 10px; padding: 9px 0; border-top: 1px solid var(--borda); }
+  .passos li:first-child { border-top: 0; }
+  .passos .st { font: 700 .9rem var(--f-mono); }
+  .passos .ok .st { color: var(--ok); } .passos .falhou .st { color: var(--iris); } .passos .aviso .st { color: var(--aviso); }
+  .passos .rodando .st { color: var(--vivo); }
+  .passos .ms { font: .75rem var(--f-mono); color: var(--suave); white-space: nowrap; }
+  .passos .det { grid-column: 2 / -1; font: .78rem var(--f-mono); color: var(--suave); overflow-wrap: anywhere; }
+  #relatorio { width: 100%; min-height: 160px; font: .72rem var(--f-mono); background: var(--fundo); color: var(--texto);
+    border: 1px solid var(--borda); border-radius: 10px; padding: 10px; }
+  body { padding-bottom: 24px; }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="nome">Diagnóstico do aparelho<small>Fauna Bird Lab · <span id="versao">—</span></small></div>
+</header>
+<main>
+  <section class="cartao">
+    <h2>Para que serve</h2>
+    <p class="suave">Testa, uma a uma, as etapas que o app faz ao abrir (recursos do navegador, armazenamento, arquivos do modelo,
+      carga do modelo e uma análise de teste) e mostra onde parou. Nada sai do aparelho: no fim, toque em <b>Copiar resultado</b>
+      e mande o texto para quem está ajudando.</p>
+    <p class="suave">A parte 2 baixa o modelo (cerca de 80 MB) se ele ainda não estiver guardado: use Wi-Fi.
+      Pode levar alguns minutos; deixe a tela ligada.</p>
+    <div class="controles">
+      <button class="btn primario" id="btn-completo">Testar o modelo (parte 2)</button>
+      <button class="btn" id="btn-copiar">Copiar resultado</button>
+      <a class="btn" href="./">Voltar ao app</a>
+    </div>
+    <p class="estado mono" id="estado">Parte 1 rodando…</p>
+  </section>
+  <section class="cartao">
+    <h2>Etapas</h2>
+    <ol class="passos" id="passos"></ol>
+  </section>
+  <section class="cartao">
+    <h2>Resultado para copiar</h2>
+    <textarea id="relatorio" readonly></textarea>
+  </section>
+</main>
+<script type="module" src="diagnostico.js"></script>
+</body>
+</html>
