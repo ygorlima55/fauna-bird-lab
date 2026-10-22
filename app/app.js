@@ -21,7 +21,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.8";
+const VERSAO_APP = "0.6.9";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"

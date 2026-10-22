@@ -1,7 +1,7 @@
 // Service worker do Fauna Bird Lab · mude VERSAO a cada publicação para atualizar os aparelhos.
 // Fica na raiz do projeto para controlar a tela (app/), o motor (core/, inclusive o worker),
 // o ONNX Runtime (vendor/) e os modelos (modelos/). Os testes (testes/) ficam fora do cache.
-const VERSAO = "0.6.8";
+const VERSAO = "0.6.9";
 const CACHE_APP = "fbl-app-" + VERSAO;
 const CACHE_MODELOS = "fbl-modelos-birdnet-plus-v3.0-preview3.1";   // ~95 MB: só muda com modelo novo
 const CACHE_REF = "fbl-referencias";                                 // fotos e sons da ficha de espécie (app.js)
@@ -42,9 +42,11 @@ const MODELOS = [
 
 self.addEventListener("install", (e) => {
   e.waitUntil((async () => {
-    await (await caches.open(CACHE_APP)).addAll(APP);
+    // cache: "reload" vai direto ao servidor: o GitHub Pages manda guardar cada arquivo por 10 min (max-age=600)
+    // e, sem isso, a versão nova podia instalar o app.js da versão anterior
+    await (await caches.open(CACHE_APP)).addAll(APP.map((u) => new Request(u, { cache: "reload" })));
     const cm = await caches.open(CACHE_MODELOS);
-    for (const url of MODELOS) if (!(await cm.match(url))) await cm.add(url);   // não baixa de novo o que já tem
+    for (const url of MODELOS) if (!(await cm.match(url))) await cm.add(new Request(url, { cache: "reload" }));   // não baixa de novo o que já tem
     await self.skipWaiting();
   })());
 });
