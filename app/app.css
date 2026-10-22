@@ -195,3 +195,11 @@ table.metricas { margin: 8px 0; }
   background: var(--cartao2); border: 1px solid var(--vivo); border-radius: var(--raio); padding: 10px 12px 10px 16px;
   box-shadow: 0 12px 30px var(--sombra); font-size: .9rem; max-width: 560px; margin: 0 auto; }
 .faixa-versao[hidden] { display: none; }
+
+/* aviso de microfone mudo (silêncio digital durante a escuta) */
+.aviso-mudo { display: flex; flex-direction: column; gap: 2px; margin: 8px 16px 0; padding: 10px 14px; max-width: 420px;
+  border: 1.5px solid var(--iris); border-radius: var(--raio); background: color-mix(in srgb, var(--iris) 14%, var(--fundo));
+  font-size: .86rem; text-align: center; animation: pisca-mudo 1.6s ease-in-out infinite; }
+.aviso-mudo b { color: var(--iris); font-size: 1rem; font-variant-numeric: tabular-nums; }
+.aviso-mudo[hidden] { display: none; }
+@keyframes pisca-mudo { 50% { border-color: transparent; } }

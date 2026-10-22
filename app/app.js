@@ -19,7 +19,7 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 
-const VERSAO_APP = "0.6.4";
+const VERSAO_APP = "0.6.5";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -208,10 +208,68 @@ function ajustarPasso() {
   else if (estado.passoS > 1 && media < (estado.passoS - 1) * 1000 * 0.6) { estado.passoS--; estado.msJanela = []; }
 }
 
+// ---------- microfone mudo ----------
+// Na 1ª saída de campo, 5 de 14 gravações tiveram até 55 s de zeros exatos: o Android entrega o microfone a um app
+// por vez (ex.: Merlin aberto por cima) e passa silêncio digital para o outro. Ruído de verdade nunca é zero exato,
+// então ≥ 1 s de zeros seguidos = microfone mudo. Blocos que param de chegar (app congelado) contam à parte.
+const MUDO_MIN_S = 1, PARADA_MIN_MS = 2000;
+
+function novoMudo() {
+  return { corrida: 0, inicioS: 0, trechos: [], paradas: [], tela: [], ultimoBloco: performance.now(), avisoS: 0 };
+}
+
+function fecharTrecho(m) {
+  if (m.corrida >= MUDO_MIN_S * SR) m.trechos.push({ inicioS: +m.inicioS.toFixed(1), durS: +(m.corrida / SR).toFixed(1) });
+  m.corrida = 0;
+}
+
+function medirMudo(bloco) {
+  const m = estado.mudo, t0 = (estado.anel.total - bloco.length) / SR, agora = performance.now();
+  if (agora - m.ultimoBloco > PARADA_MIN_MS) m.paradas.push({ aposS: +t0.toFixed(1), durS: +((agora - m.ultimoBloco) / 1000).toFixed(1) });
+  m.ultimoBloco = agora;
+  for (let i = 0; i < bloco.length; i++) {
+    if (bloco[i] === 0) { if (m.corrida++ === 0) m.inicioS = t0 + i / SR; }
+    else if (m.corrida) fecharTrecho(m);
+  }
+  avisarMudo(m.corrida / SR);
+}
+
+function resumoMudo(m, duracaoS) {
+  fecharTrecho(m);
+  const totalS = m.trechos.reduce((a, t) => a + t.durS, 0);
+  return { totalS: +totalS.toFixed(1), pct: duracaoS ? +(100 * totalS / duracaoS).toFixed(1) : 0,
+           maiorS: Math.max(0, ...m.trechos.map((t) => t.durS)), trechos: m.trechos.slice(0, 50),
+           paradas: m.paradas.slice(0, 50), tela: m.tela.slice(0, 100) };
+}
+
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+function textoMudo(si) {
+  const n = si.trechos.length, maior = si.trechos.find((t) => t.durS === si.maiorS);
+  return `${Math.round(si.totalS)} s (${String(si.pct).replace(".", ",")}% da gravação) em ${n} trecho${n > 1 ? "s" : ""}` +
+    (maior ? `; o maior, de ${Math.round(maior.durS)} s, começou em ${mmss(maior.inicioS)}` : "");
+}
+
+// aviso na tela Ouvir; só para o microfone (um arquivo pode ter silêncio digital de verdade)
+function avisarMudo(segundos) {
+  const el = $("aviso-mudo"), mudo = estado.fonte === "microfone" && segundos >= MUDO_MIN_S;
+  if (mudo) $("aviso-mudo-s").textContent = Math.floor(segundos);
+  if (el.hidden === !mudo) return;
+  el.hidden = !mudo;
+  if (mudo) navigator.vibrate?.(200);
+}
+
+// blocos parados (página congelada): o vigia avisa quando a tela volta
+setInterval(() => {
+  if (!estado.rodando || !estado.mudo || estado.fonte !== "microfone") return;
+  const parado = (performance.now() - estado.mudo.ultimoBloco) / 1000;
+  if (parado * 1000 > PARADA_MIN_MS) avisarMudo(parado);
+}, 1000);
+
 function aoBloco(bloco) {
   if (!estado.rodando) return;
   estado.anel.push(bloco);
   estado.blocos.push(bloco);
+  medirMudo(bloco);
   if (estado.anel.total / SR >= MAX_GRAVACAO_S) { parar(); return; }
   if (estado.ocupado) return;
   if (estado.anel.total >= JANELA_S * SR && estado.anel.total - estado.ultimaPos >= estado.passoS * SR) estado.analiseAtual = analisarJanela();
@@ -225,11 +283,16 @@ async function manterTelaLigada(ligar) {
     else if (!ligar) { await travaTela?.release(); travaTela = null; }
   } catch { travaTela = null; }
 }
-document.addEventListener("visibilitychange", () => { if (estado.rodando && document.visibilityState === "visible") manterTelaLigada(true); });
+document.addEventListener("visibilitychange", () => {
+  if (!estado.rodando) return;
+  const visivel = document.visibilityState === "visible";
+  estado.mudo?.tela.push({ tS: +(estado.anel.total / SR).toFixed(1), quando: new Date().toISOString(), tela: visivel ? "voltou" : "saiu" });
+  if (visivel) manterTelaLigada(true);
+});
 
 async function iniciar(fonte, bytes, nomeArquivo) {
   Object.assign(estado, { anel: new Anel(JANELA_S + 1), acum: new Acumulador({ limiar: LIMIAR }), ultimaPos: 0, msJanela: [], msTodas: [],
-    passoS: 1, blocos: [], janelasSessao: [], inicio: new Date().toISOString(), fonte, nomeArquivo: nomeArquivo || null });
+    passoS: 1, blocos: [], janelasSessao: [], inicio: new Date().toISOString(), fonte, nomeArquivo: nomeArquivo || null, mudo: novoMudo() });
   estado.captura = new Captura({ onBloco: aoBloco });
   espectro.limpar();
   $("salvo").hidden = true;
@@ -259,6 +322,7 @@ async function parar() {
   await estado.captura.parar();
   await estado.analiseAtual;   // a última janela entra na sessão salva
   figura.desligar();
+  $("aviso-mudo").hidden = true;
   const melhor = estado.acum.lista(estado.anel.total / SR)[0];
   botaoGravar(melhor ? nomePt(estado.motor.rotulos[melhor.indice].especie) : "Nada acima do limiar");
   $("palpite").textContent = melhor ? `mais provável · final ${f2(melhor.melhorFinal)} · toque para ouvir de novo` : "toque para ouvir de novo";
@@ -288,9 +352,11 @@ async function salvarAoVivo() {
       ...metadadosBase(), especies, janelas: estado.janelasSessao, nJanelas: estado.acum.janelas,
       msPorJanela: estado.msTodas.length ? Math.round(estado.msTodas.reduce((a, b) => a + b, 0) / estado.msTodas.length) : null,
       passoFinalS: estado.passoS, snrDb: snrAproximado(pcm, SR), assinatura: figura.assinatura(), sha256Audio: await sha256(wav), bytesAudio: wav.size,
+      silencio: resumoMudo(estado.mudo, tempoS),
     };
     await salvarSessao(sessao, { audio: wav, sonograma: await sonogramaPng(pcm, SR) });
-    $("salvo").innerHTML = `Sessão salva no aparelho (${especies.length} espécie(s), ${tempoS.toFixed(0)} s). <a href="#" id="ver-salvo">Ver no histórico</a>`;
+    $("salvo").innerHTML = `Sessão salva no aparelho (${especies.length} espécie(s), ${tempoS.toFixed(0)} s). <a href="#" id="ver-salvo">Ver no histórico</a>` +
+      (sessao.silencio.totalS ? `<br><span class="falha">Microfone mudo em ${textoMudo(sessao.silencio)}.</span>` : "");
     $("ver-salvo").onclick = (e) => { e.preventDefault(); abrirAba("historico"); abrirDetalhe(sessao.id); };
     estado.ultimaSessao = sessao.id;
     $("lista").dataset.sessao = sessao.id;   // tocar numa espécie da lista abre a ficha já com "comparar"
@@ -412,7 +478,7 @@ async function desenharHistorico() {
       ${s.assinatura ? `<canvas class="mini" aria-hidden="true"></canvas>` : ""}
       <span class="quando">${dataHora(s.inicio)} · ${s.tipo === "gravacao" ? "gravação" : s.tipo === "importado" ? "importado" : "arquivo tocado"} · ${Math.round(s.duracaoS)} s</span>
       <span class="nome">${t ? esc(t.nomePt) + ` <span class="mono">${f2(t.final)}</span>` : "nenhuma espécie acima do limiar"}</span>
-      <span class="suave">${s.arquivoOriginal ? esc(s.arquivoOriginal) + " · " : ""}${s.local ? `${s.local.lat.toFixed(3)}, ${s.local.lon.toFixed(3)}` : "sem local"}${s.especies.length > 1 ? ` · +${s.especies.length - 1} espécie(s)` : ""}</span>
+      <span class="suave">${s.arquivoOriginal ? esc(s.arquivoOriginal) + " · " : ""}${s.local ? `${s.local.lat.toFixed(3)}, ${s.local.lon.toFixed(3)}` : "sem local"}${s.especies.length > 1 ? ` · +${s.especies.length - 1} espécie(s)` : ""}${s.silencio?.totalS ? ` · <span class="falha">mudo ${Math.round(s.silencio.pct)}%</span>` : ""}</span>
     </button></li>`;
   }).join("") : `<li class="vazio">Nenhuma sessão salva ainda.</li>`;
   $("historico").querySelectorAll("button.item").forEach((b) => { b.onclick = () => abrirDetalhe(b.dataset.id); });
@@ -437,6 +503,8 @@ async function abrirDetalhe(id) {
       ${s.especies.slice(0, 10).map((e) => `<tr><td data-especie="${esc(e.especie)}">${esc(e.nomePt)}<br><i class="suave">${esc(e.especie)}</i></td><td class="mono">${f2(e.final)}</td>
         <td class="mono">${f2(e.som)}</td><td class="mono">${f2(e.prior)}</td><td class="mono">${e.janelas ?? "—"}</td></tr>`).join("") ||
         `<tr><td colspan="5">Nenhuma espécie acima do limiar.</td></tr>`}</table>
+    ${s.silencio?.totalS ? `<p class="falha">Microfone mudo em ${textoMudo(s.silencio)}. Nesses trechos o app não recebeu som
+      (outro app usando o microfone ou o Bird Lab fora da tela)${s.silencio.tela?.some((e) => e.tela === "saiu") ? `; o app saiu da tela ${s.silencio.tela.filter((e) => e.tela === "saiu").length} vez(es)` : ""}.</p>` : ""}
     <p class="suave mono">${esc(s.origem)} · ${s.nJanelas} janelas · ${s.msPorJanela ?? "—"} ms/janela · SNR ${s.snrDb ?? "—"} dB<br>
       local: ${s.local ? `${s.local.lat.toFixed(5)}, ${s.local.lon.toFixed(5)} (${esc(s.local.fonte)}${s.local.precisaoM ? `, ±${Math.round(s.local.precisaoM)} m` : ""})` : "sem local"} · semana ${s.semana}<br>
       id ${s.id}<br>SHA-256 ${s.sha256Audio}<br>${esc(s.modelo.nome)} · app ${esc(s.app)} · ${s.sincronizado ? "sincronizado" : "não sincronizado"}</p>
