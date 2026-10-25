@@ -21,8 +21,9 @@ import { medirDesempenho } from "../core/desempenho.js";
 import { FiguraCanto, desenharMiniatura } from "./figura.js";
 import { pacoteDados, nomeArquivos, CONTATO } from "../core/pesquisa.js";
 import { SCHEMA_OBS, DETECTOR_EVENTOS, perfilAparelho, Diario, metricasJanela } from "../core/observabilidade.js";
+import { zipar } from "../core/zip.js";
 
-const VERSAO_APP = "0.9.1";
+const VERSAO_APP = "0.9.2";
 const MODELOS = "../modelos/birdnet-plus-v3/";
 const MODELO = { nome: "BirdNET+ V3.0-preview3.1 Global 10K-pruned FP16", geomodelo: "Geomodelo V3.0.4 Global 10K-pruned FP16", licenca: "Apache-2.0" };
 const PRIOR_MINIMO = 0.03;   // defaultThreshold do geomodelo: abaixo disso, "fora da área esperada"
@@ -162,7 +163,8 @@ function linhaOutros(outros) {
 }
 
 function desenharLista(tempoS) {
-  const todos = estado.acum.lista(tempoS), itens = aves(todos), outros = todos.filter((r) => !ehAve(r));
+  // 0.9.2: a tela mostra todas as espécies que entraram na lista (antes, só 5; LISTA-001). A regra de entrada não mudou.
+  const todos = estado.acum.lista(tempoS, Infinity), itens = aves(todos), outros = todos.filter((r) => !ehAve(r));
   const ol = $("lista");
   if (estado.rodando) $("palpite").textContent = itens.length
     ? `agora: ${nomePt(estado.motor.rotulos[itens[0].indice].especie)} · ${f2(itens[0].melhorFinal)}` : "";
@@ -614,7 +616,10 @@ async function abrirDetalhe(id) {
         <td class="mono">${f2(e.som)}</td><td class="mono">${f2(e.prior)}</td><td class="mono">${e.janelas ?? "—"}</td></tr>`).join("") ||
         `<tr><td colspan="5">Nenhuma espécie acima do limiar.</td></tr>`}</table>
     ${s.silencio?.totalS ? `<p class="falha">Microfone mudo em ${textoMudo(s.silencio)}. Nesses trechos o app não recebeu som
-      (outro app usando o microfone ou o Bird Lab fora da tela)${s.silencio.tela?.some((e) => e.tela === "saiu") ? `; o app saiu da tela ${s.silencio.tela.filter((e) => e.tela === "saiu").length} vez(es)` : ""}.</p>` : ""}
+      (outro app usando o microfone ou o Bird Lab fora da tela)${s.silencio.tela?.some((e) => e.tela === "saiu") ? `; o app saiu da tela ${s.silencio.tela.filter((e) => e.tela === "saiu").length} vez(es)` : ""}.
+      <b>Nesses trechos as espécies não foram avaliadas</b>: o que cantou ali não aparece na lista, e isso é falha de captura,
+      não erro do modelo. Trechos: ${s.silencio.trechos.map((t) => `${mmss(t.inicioS)} a ${mmss(t.inicioS + t.durS)}`).join(", ")}.
+      Para evitar, deixe o Bird Lab na tela durante a escuta (modo bolso).</p>` : ""}
     <p class="suave" id="d-repetidas">Procurando gravações repetidas…</p>
     <p class="suave mono">${esc(s.origem)} · ${s.nJanelas} janelas · ${s.msPorJanela ?? "—"} ms/janela · SNR ${s.snrDb ?? "—"} dB<br>
       local: ${s.local ? `${s.local.lat.toFixed(5)}, ${s.local.lon.toFixed(5)} (${esc(s.local.fonte)}${s.local.precisaoM ? `, ±${Math.round(s.local.precisaoM)} m` : ""})` : "sem local"} · semana ${s.semana}<br>
@@ -622,12 +627,18 @@ async function abrirDetalhe(id) {
     ${fichaCampoHtml(s)}
     <div class="controles">
       <button class="btn primario" id="d-pesquisa">Enviar para a pesquisa</button>
+      <button class="btn" id="d-zip">Baixar áudio + dados (.zip)</button>
       <button class="btn" id="d-wav">Baixar WAV</button>
       <button class="btn" id="d-json">Baixar dados (JSON)</button>
       <button class="btn" id="d-apagar">Apagar</button>
       <button class="btn" id="d-fechar">Fechar</button>
     </div>`;
   const nome = `fauna-bird-lab_${s.inicio.slice(0, 19).replace(/[:T]/g, "-")}_${s.id.slice(0, 8)}`;
+  // um download só com o WAV e o JSON: no Chrome do celular o 2º download seguido não chegava (DL-001)
+  $("d-zip").onclick = async () => baixar(await zipar([
+    ...(a?.audio ? [{ nome: nome + ".wav", dados: a.audio }] : []),
+    { nome: nome + ".json", dados: JSON.stringify(s, null, 2) },
+  ]), nome + ".zip");
   $("d-wav").onclick = () => a?.audio && baixar(a.audio, nome + ".wav");
   $("d-json").onclick = () => baixar(new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }), nome + ".json");
   $("d-fechar").onclick = () => { d.hidden = true; };
